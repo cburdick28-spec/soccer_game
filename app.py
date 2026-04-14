@@ -1454,12 +1454,16 @@ def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> 
             if ":" in line:
                 k, v = line.split(":", 1)
                 lines[k.strip()] = v.strip()
+        # Fall back to template values for any missing keys
         return {
-            "narrative":   lines.get("NARRATIVE", fallback["narrative"]),
-            "choices":     [lines.get("CHOICE_A", tmpl_a[0]), lines.get("CHOICE_B", tmpl_b[0])],
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
             "stat_deltas": [tmpl_a[1], tmpl_b[1]],
         }
-    except Exception:
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
         return fallback
 
 
@@ -1498,7 +1502,10 @@ def _ai_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dic
             temperature=0.85,
         )
         return resp.choices[0].message.content.strip()
-    except Exception:
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
         return fallback
 
 
