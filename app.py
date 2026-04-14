@@ -1,6 +1,6 @@
 """
 app.py  —  ⚽ Soccer Career Guesser  (Advanced Edition)
-Seven game modes:
+Eight game modes:
   1. Career Timeline  – reveal clubs one-by-one and guess the footballer
   2. Footballer Guesser – Wordle-style 9-attribute feedback grid
   3. Trophy Cabinet – reveal trophies one-by-one and guess the footballer
@@ -8,6 +8,7 @@ Seven game modes:
   5. Statistics & Achievements
   6. AI Career Simulator – guide your own footballer from academy to retirement
   7. Beat the Footballer – face a star in a 5-question career trivia duel
+  8. Coach Career Sim – build a managerial career from grassroots to glory
 """
 
 import random
@@ -261,6 +262,16 @@ DEFAULTS = {
     "btf_won":             False,
     "btf_gave_up":         False,
     "btf_input_key":       400,
+    # Coach Career Sim
+    "coach_manager":       None,   # {name, nationality, philosophy}
+    "coach_stage_idx":     -1,     # -1=not started, 0-7=stage, 8=ended
+    "coach_awaiting_outcome": False,
+    "coach_chosen_option": None,
+    "coach_narrative":     "",
+    "coach_choices":       [],
+    "coach_outcome_text":  "",
+    "coach_stats":         {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0},
+    "coach_history":       [],
 }
 
 for k, v in DEFAULTS.items():
@@ -556,10 +567,10 @@ with st.sidebar:
 # Main area — title
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Guesser</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 7 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 8 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf = st.tabs([
+tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf, tab_coach = st.tabs([
     "🏟️ Career Timeline",
     "🟩 Footballer Guesser",
     "🏆 Trophy Cabinet",
@@ -567,6 +578,7 @@ tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf = st.tabs([
     "📊 Stats & Achievements",
     "🤖 AI Career Sim",
     "⚔️ Beat the Footballer",
+    "🧑‍💼 Coach Career Sim",
 ])
 
 # ─────────────────── helpers ──────────────────────────────────────────────────
@@ -1972,6 +1984,430 @@ with tab_ai:
             st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
             st.session_state.ai_history          = []
             st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COACH CAREER SIM — constants, helpers, tab rendering
+# ══════════════════════════════════════════════════════════════════════════════
+
+_COACH_PHILOSOPHIES = [
+    "High-Press Gegenpressing",
+    "Tiki-Taka Possession",
+    "Counter-Attack Specialist",
+    "Wing-Play Maestro",
+    "Total Football",
+    "Defensive Pragmatist",
+    "High-Tempo Direct Play",
+    "False-9 Innovator",
+]
+
+_COACH_STAGES = [
+    {"idx": 0, "id": "grassroots",   "name": "Grassroots & Youth Coaching", "age": "30–35", "icon": "🌱"},
+    {"idx": 1, "id": "assistant",    "name": "Assistant Coach Role",         "age": "35–38", "icon": "📋"},
+    {"idx": 2, "id": "first_role",   "name": "First Head Coach Role",        "age": "38–42", "icon": "⚡"},
+    {"idx": 3, "id": "mid_table",    "name": "Mid-Table Manager",            "age": "42–46", "icon": "📈"},
+    {"idx": 4, "id": "title_chase",  "name": "Title Contender",              "age": "46–50", "icon": "💥"},
+    {"idx": 5, "id": "elite",        "name": "Elite Club Manager",           "age": "50–55", "icon": "🏆"},
+    {"idx": 6, "id": "international","name": "International Manager",        "age": "55–60", "icon": "👑"},
+    {"idx": 7, "id": "legacy",       "name": "Legendary Final Chapter",      "age": "60+",   "icon": "🏁"},
+]
+
+
+def _coach_stage_data(philosophy: str) -> list:
+    """Return list of (narrative, choice_a, choice_b) tuples for 8 coaching stages.
+    Each choice is (text: str, stat_delta: dict) where stats are:
+      wins, trophies, players_developed, reputation.
+    """
+    return [
+        # 0 – Grassroots & Youth Coaching (30-35)
+        (
+            "After hanging up the boots, {name} took their first coaching badge and joined a local club's youth set-up. "
+            "The {philosophy} philosophy was already taking shape on the training ground.",
+            ("Focus on developing young talent — run an elite academy programme",
+             {"wins": 10, "trophies": 0, "players_developed": 8, "reputation": 6}),
+            ("Take charge of the reserve team and target a cup run to raise the profile",
+             {"wins": 18, "trophies": 1, "players_developed": 3, "reputation": 10}),
+        ),
+        # 1 – Assistant Coach (35-38)
+        (
+            "An impressive stint in the youth ranks caught the attention of a professional club. "
+            "{name} was offered an assistant role, learning the art of management from the dugout.",
+            ("Learn from a world-renowned head coach at a top-flight club",
+             {"wins": 22, "trophies": 2, "players_developed": 4, "reputation": 16}),
+            ("Take the assistant role at an ambitious lower-league club with full tactical freedom",
+             {"wins": 30, "trophies": 1, "players_developed": 6, "reputation": 18}),
+        ),
+        # 2 – First Head Coach Role (38-42)
+        (
+            "The moment had arrived. {name} was handed the keys to a club for the first time. "
+            "The {philosophy} system was installed from day one — but the squad needed time to adapt.",
+            ("Implement the system boldly and demand results from the start",
+             {"wins": 38, "trophies": 2, "players_developed": 5, "reputation": 22}),
+            ("Earn trust by building team spirit first, then gradually introduce the philosophy",
+             {"wins": 32, "trophies": 1, "players_developed": 9, "reputation": 25}),
+        ),
+        # 3 – Mid-Table Manager (42-46)
+        (
+            "A strong first stint earned {name} a move to a more established club. "
+            "The challenge now was punching above the club's weight — and turning heads across the continent.",
+            ("Go all-in on an exciting young transfer policy to build for the future",
+             {"wins": 44, "trophies": 2, "players_developed": 12, "reputation": 28}),
+            ("Prioritise results and pragmatic tactics to secure European football for the first time",
+             {"wins": 55, "trophies": 3, "players_developed": 5, "reputation": 32}),
+        ),
+        # 4 – Title Contender (46-50)
+        (
+            "A European finish attracted serious attention. {name} was now managing a genuine title contender, "
+            "with real ambitions of silverware and continental glory on the agenda.",
+            ("Challenge for the title and domestic cup double in one historic season",
+             {"wins": 62, "trophies": 4, "players_developed": 8, "reputation": 38}),
+            ("Target a deep Champions League run to put your name on the European map",
+             {"wins": 50, "trophies": 3, "players_developed": 6, "reputation": 42}),
+        ),
+        # 5 – Elite Club Manager (50-55)
+        (
+            "Europe's elite came calling. {name} was appointed at one of the world's most scrutinised clubs, "
+            "where only trophies and attractive {philosophy} football would satisfy the fanbase.",
+            ("Win back-to-back league titles and reinforce your domestic dominance",
+             {"wins": 80, "trophies": 5, "players_developed": 7, "reputation": 48}),
+            ("Lead the club to an unprecedented Champions League triumph and become a continental legend",
+             {"wins": 65, "trophies": 4, "players_developed": 6, "reputation": 55}),
+        ),
+        # 6 – International Manager (55-60)
+        (
+            "After trophy-laden club years, {name} accepted the call to manage the national team — "
+            "the ultimate honour in football management.",
+            ("Build a golden generation of young talent for a long-term World Cup project",
+             {"wins": 40, "trophies": 2, "players_developed": 15, "reputation": 55}),
+            ("Inspire an experienced squad to an immediate major tournament triumph",
+             {"wins": 35, "trophies": 3, "players_developed": 8, "reputation": 60}),
+        ),
+        # 7 – Legendary Final Chapter (60+)
+        (
+            "At 60, {name}'s legacy was already assured. But one final chapter remained — "
+            "a chance to cement a place among the all-time managerial greats.",
+            ("Return to a former club for an emotional reunion and one last title push",
+             {"wins": 30, "trophies": 2, "players_developed": 10, "reputation": 40}),
+            ("Write football history by managing a club from the lower leagues to a trophy in record time",
+             {"wins": 45, "trophies": 3, "players_developed": 18, "reputation": 50}),
+        ),
+    ]
+
+
+def _coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: str) -> dict:
+    """Return {narrative, choices: [str, str], stat_deltas: [dict, dict]}.
+    Falls back to built-in templates when no API key or on error.
+    """
+    templates = _coach_stage_data(manager["philosophy"])
+    tmpl_narr, tmpl_a, tmpl_b = templates[stage["idx"]]
+    fallback = {
+        "narrative":   tmpl_narr.format(name=manager["name"], philosophy=manager["philosophy"]),
+        "choices":     [tmpl_a[0], tmpl_b[0]],
+        "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+    }
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stat_line = (
+            f"Career stats so far: {stats['wins']} wins, {stats['trophies']} trophies, "
+            f"{stats['players_developed']} players developed, {stats['reputation']} reputation points."
+        ) if any(stats.values()) else ""
+        prompt = (
+            f"Create a coaching career stage for this manager:\n"
+            f"Name: {manager['name']} | Nationality: {manager['nationality']} | "
+            f"Philosophy: {manager['philosophy']}\n"
+            f"Stage: {stage['name']} (Age {stage['age']})\n"
+            f"{stat_line}\n\n"
+            f"Respond in EXACTLY this format (keep each section to 1–2 sentences):\n"
+            f"NARRATIVE: [dramatic coaching career narrative for this stage]\n"
+            f"CHOICE_A: [{tmpl_a[0]}]\n"
+            f"CHOICE_B: [{tmpl_b[0]}]"
+        )
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a football management career narrator creating an engaging text-adventure game. "
+                    "Be concise, dramatic, and use authentic football management details. "
+                    "Keep the two choices close to the template options provided."
+                )},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=220,
+            temperature=0.85,
+        )
+        lines = {}
+        for line in resp.choices[0].message.content.strip().splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                lines[k.strip()] = v.strip()
+        return {
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
+            "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+        }
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _coach_generate_outcome(manager: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
+    """Return outcome narrative string for a coaching stage choice."""
+    parts = []
+    if delta.get("wins"):              parts.append(f"{delta['wins']} wins")
+    if delta.get("trophies"):          parts.append(f"{delta['trophies']} trophies")
+    if delta.get("players_developed"): parts.append(f"{delta['players_developed']} players developed")
+    if delta.get("reputation"):        parts.append(f"{delta['reputation']} reputation points")
+    stat_str = ", ".join(parts) if parts else "invaluable experience"
+    fallback = (
+        f"A superb spell of management for {manager['name']}! "
+        f"The decision paid off with {stat_str} earned across this stage of the coaching career."
+    )
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a football management career narrator. Write punchy, vivid outcome paragraphs."
+                )},
+                {"role": "user", "content": (
+                    f"{manager['name']} ({manager['nationality']} manager, {manager['philosophy']}) "
+                    f"chose: \"{choice_text}\"\n"
+                    f"Stage: {stage['name']}\n"
+                    f"Results: {stat_str}\n\n"
+                    f"Write ONE paragraph (2–3 sentences) describing what happened. "
+                    f"Be specific and dramatic. Do NOT start with the manager's name."
+                )},
+            ],
+            max_tokens=130,
+            temperature=0.85,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _coach_career_rating(stats: dict) -> tuple[int, str]:
+    """Return (0-100 rating, badge label) based on accumulated coaching stats."""
+    score = (
+        stats["wins"] * 0.6
+        + stats["trophies"] * 18
+        + stats["players_developed"] * 2.5
+        + stats["reputation"] * 1.2
+    )
+    if score >= 850: return 99, "🐐 Greatest Manager of All Time"
+    if score >= 650: return 95, "⭐ Legendary Manager"
+    if score >= 480: return 90, "🌟 Elite Tactician"
+    if score >= 330: return 83, "📈 Accomplished Manager"
+    if score >= 200: return 74, "✅ Respected Coach"
+    return 62, "🎓 Journeyman Manager"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 8 — COACH CAREER SIM
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_coach:
+    st.markdown("## 🧑‍💼 Coach Career Simulator")
+    st.markdown(
+        "Build your managerial career from grassroots football all the way to international glory. "
+        "Every decision shapes your tactical legacy — wins, trophies, players developed, and reputation."
+    )
+    if not st.session_state.openai_api_key:
+        st.info(
+            "💡 **Tip:** Enter your OpenAI API key in the sidebar to unlock AI-generated "
+            "personalised narratives. The simulator works great with built-in story templates too!"
+        )
+
+    coach_stage_idx = st.session_state.coach_stage_idx
+    coach_manager   = st.session_state.coach_manager
+
+    # ── Manager creation form ─────────────────────────────────────────────────
+    if coach_stage_idx == -1:
+        st.markdown("### 📋 Create Your Manager")
+        col_cf1, col_cf2 = st.columns(2)
+        with col_cf1:
+            coach_name = st.text_input("Manager Name", placeholder="e.g. Ana Ferreira", key="coach_name_input")
+            coach_nat_options = sorted(list(FLAGS.keys()) + _AI_EXTRA_NATIONALITIES)
+            coach_nat = st.selectbox("Nationality", coach_nat_options, key="coach_nat_input")
+        with col_cf2:
+            coach_philosophy = st.selectbox("Coaching Philosophy", _COACH_PHILOSOPHIES, key="coach_phil_input")
+
+        if st.button("🚀 Start Coaching Career", key="coach_start"):
+            if not coach_name.strip():
+                st.warning("Please enter a manager name.")
+            else:
+                st.session_state.coach_manager = {
+                    "name": coach_name.strip(),
+                    "nationality": coach_nat,
+                    "philosophy": coach_philosophy,
+                }
+                st.session_state.coach_stage_idx        = 0
+                st.session_state.coach_awaiting_outcome = False
+                st.session_state.coach_chosen_option    = None
+                st.session_state.coach_narrative        = ""
+                st.session_state.coach_choices          = []
+                st.session_state.coach_outcome_text     = ""
+                st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
+                st.session_state.coach_history          = []
+                st.rerun()
+
+    # ── Active coaching stage ─────────────────────────────────────────────────
+    elif coach_stage_idx < len(_COACH_STAGES):
+        stage   = _COACH_STAGES[coach_stage_idx]
+        manager = st.session_state.coach_manager
+        stats   = st.session_state.coach_stats
+        api_key = st.session_state.openai_api_key
+
+        st.markdown(f"### {stage['icon']} Stage {coach_stage_idx + 1} / {len(_COACH_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress(coach_stage_idx / len(_COACH_STAGES))
+
+        # Live stats bar
+        cs1, cs2, cs3, cs4 = st.columns(4)
+        with cs1:
+            st.metric("🏅 Wins",              stats["wins"])
+        with cs2:
+            st.metric("🏆 Trophies",          stats["trophies"])
+        with cs3:
+            st.metric("🌱 Players Developed", stats["players_developed"])
+        with cs4:
+            st.metric("⭐ Reputation",         stats["reputation"])
+
+        st.markdown("---")
+
+        # Generate narrative if not yet loaded for this stage
+        if not st.session_state.coach_narrative:
+            with st.spinner("✍️ Writing your coaching story…"):
+                data = _coach_generate_stage(manager, stage, stats, api_key)
+            st.session_state.coach_narrative = data["narrative"]
+            st.session_state.coach_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.rerun()
+
+        # Show narrative
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #ff8c00;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.coach_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Showing outcome ────────────────────────────────────────────────────
+        if st.session_state.coach_awaiting_outcome:
+            chosen_idx = st.session_state.coach_chosen_option
+            choice_text, delta = st.session_state.coach_choices[chosen_idx]
+
+            if not st.session_state.coach_outcome_text:
+                with st.spinner("⚡ Simulating the outcome…"):
+                    outcome = _coach_generate_outcome(manager, stage, choice_text, delta, api_key)
+                st.session_state.coach_outcome_text = outcome
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(255,140,0,0.1);border-left:4px solid #ffc107;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.coach_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            gain_parts = []
+            if delta.get("wins"):              gain_parts.append(f"🏅 +{delta['wins']} wins")
+            if delta.get("trophies"):          gain_parts.append(f"🏆 +{delta['trophies']} trophies")
+            if delta.get("players_developed"): gain_parts.append(f"🌱 +{delta['players_developed']} players")
+            if delta.get("reputation"):        gain_parts.append(f"⭐ +{delta['reputation']} reputation")
+            if gain_parts:
+                st.markdown("**Stats earned:** " + "  ·  ".join(gain_parts))
+
+            next_label = "▶️ Next Stage" if coach_stage_idx < len(_COACH_STAGES) - 1 else "🏁 Retire & See Legacy"
+            if st.button(next_label, key="coach_next_stage"):
+                for k, v in delta.items():
+                    st.session_state.coach_stats[k] += v
+                st.session_state.coach_history.append({
+                    "stage":   stage["name"],
+                    "choice":  choice_text,
+                    "outcome": st.session_state.coach_outcome_text,
+                    "delta":   delta,
+                })
+                st.session_state.coach_stage_idx        += 1
+                st.session_state.coach_awaiting_outcome  = False
+                st.session_state.coach_chosen_option     = None
+                st.session_state.coach_narrative         = ""
+                st.session_state.coach_choices           = []
+                st.session_state.coach_outcome_text      = ""
+                st.rerun()
+
+        # ── Awaiting decision ──────────────────────────────────────────────────
+        else:
+            st.markdown("### 🤔 What do you do?")
+            choices = st.session_state.coach_choices
+            col_ca, col_cb = st.columns(2)
+            with col_ca:
+                if st.button(f"**A:** {choices[0][0]}", key="coach_choice_a", use_container_width=True):
+                    st.session_state.coach_chosen_option    = 0
+                    st.session_state.coach_awaiting_outcome = True
+                    st.rerun()
+            with col_cb:
+                if st.button(f"**B:** {choices[1][0]}", key="coach_choice_b", use_container_width=True):
+                    st.session_state.coach_chosen_option    = 1
+                    st.session_state.coach_awaiting_outcome = True
+                    st.rerun()
+
+    # ── Career ended — legacy screen ──────────────────────────────────────────
+    elif coach_stage_idx >= len(_COACH_STAGES):
+        manager = st.session_state.coach_manager
+        stats   = st.session_state.coach_stats
+        rating, badge = _coach_career_rating(stats)
+        flag = FLAGS.get(manager["nationality"], "🌍")
+
+        st.markdown(f"## 🏁 {manager['name']} — Coaching Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem;background:linear-gradient(90deg,#7b3f00,#ff8c00);">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{flag} {manager['nationality']} · {manager['philosophy']}**")
+
+        # Final stats
+        r1, r2, r3, r4 = st.columns(4)
+        with r1: st.metric("🏅 Career Wins",        stats["wins"])
+        with r2: st.metric("🏆 Trophies Won",        stats["trophies"])
+        with r3: st.metric("🌱 Players Developed",   stats["players_developed"])
+        with r4: st.metric("⭐ Total Reputation",     stats["reputation"])
+
+        st.markdown("---")
+        st.markdown("### 📖 Managerial Chronicle")
+        for entry in st.session_state.coach_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #ff8c00;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#ff8c00">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Chose: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if st.button("🔄 Start a New Coaching Career", key="coach_restart"):
+            st.session_state.coach_manager          = None
+            st.session_state.coach_stage_idx        = -1
+            st.session_state.coach_awaiting_outcome = False
+            st.session_state.coach_chosen_option    = None
+            st.session_state.coach_narrative        = ""
+            st.session_state.coach_choices          = []
+            st.session_state.coach_outcome_text     = ""
+            st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
+            st.session_state.coach_history          = []
+            st.rerun()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 7 — BEAT THE FOOTBALLER
