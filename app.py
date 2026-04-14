@@ -244,7 +244,7 @@ DEFAULTS = {
     # AI Career Simulator
     "openai_api_key":      "",
     "ai_player":           None,   # {name, nationality, position_group, style}
-    "ai_stage_idx":        -1,     # -1=not started, 0-4=stage, 5=ended
+    "ai_stage_idx":        -1,     # -1=not started, 0-7=stage, 8=ended
     "ai_awaiting_outcome": False,  # True=user chose, showing outcome; False=showing choices
     "ai_chosen_option":    None,   # 0 or 1
     "ai_narrative":        "",
@@ -252,6 +252,15 @@ DEFAULTS = {
     "ai_outcome_text":     "",
     "ai_stats":            {"goals": 0, "assists": 0, "trophies": 0, "caps": 0},
     "ai_history":          [],     # list of {stage, choice, outcome, delta}
+    # Beat the Footballer
+    "btf_player":          None,
+    "btf_questions":       [],
+    "btf_q_idx":           0,      # index of current question (0-4), 5 = done
+    "btf_selected":        None,   # answer the user selected; None = awaiting
+    "btf_answers":         [],     # list of bool
+    "btf_won":             False,
+    "btf_gave_up":         False,
+    "btf_input_key":       400,
 }
 
 for k, v in DEFAULTS.items():
@@ -296,6 +305,125 @@ def reset_tc(player):
     st.session_state.tc_won       = False
     st.session_state.tc_gave_up   = False
     st.session_state.tc_input_key += 1
+
+def generate_btf_questions(target: dict, all_players: list) -> list:
+    """Generate 5 multiple-choice trivia questions about *target* player."""
+    rng = random.Random()
+    others = [p for p in all_players if p["name"] != target["name"]]
+    name   = target["name"]
+    career = target["career"]
+    pool   = []
+
+    # Nationality (easy)
+    wrong_nats = list({p["nationality"] for p in others if p["nationality"] != target["nationality"]})
+    rng.shuffle(wrong_nats)
+    choices = wrong_nats[:3] + [target["nationality"]]
+    rng.shuffle(choices)
+    pool.append({"q": f"🌍 What is {name}'s nationality?",
+                 "choices": choices, "correct": target["nationality"],
+                 "category": "Nationality"})
+
+    # Position group (easy)
+    pos_groups = ["Forward", "Midfielder", "Defender", "Goalkeeper"]
+    wrong_pos  = [p for p in pos_groups if p != target["position_group"]]
+    choices    = wrong_pos[:3] + [target["position_group"]]
+    rng.shuffle(choices)
+    pool.append({"q": f"⚽ What position group does {name} play in?",
+                 "choices": choices, "correct": target["position_group"],
+                 "category": "Position"})
+
+    # Club in a specific period (medium)
+    if career:
+        entry      = rng.choice(career)
+        wrong_clubs = list({e["club"] for p in others for e in p["career"]
+                            if e["club"] != entry["club"]})
+        rng.shuffle(wrong_clubs)
+        choices = wrong_clubs[:3] + [entry["club"]]
+        rng.shuffle(choices)
+        pool.append({"q": f"🏟️ Which club did {name} play for from {entry['years']}?",
+                     "choices": choices, "correct": entry["club"],
+                     "category": "Career Club"})
+
+    # Number of career clubs (medium)
+    n_clubs    = len(career)
+    wrong_ns   = list({n for n in range(max(1, n_clubs - 3), n_clubs + 4) if n != n_clubs})
+    rng.shuffle(wrong_ns)
+    choices = [str(n) for n in wrong_ns[:3]] + [str(n_clubs)]
+    rng.shuffle(choices)
+    pool.append({"q": f"🔢 How many clubs has {name} played for in their career?",
+                 "choices": choices, "correct": str(n_clubs),
+                 "category": "Career Length"})
+
+    # Main league (medium)
+    main_lg     = get_top_league(target)
+    known_lgs   = ["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1",
+                   "MLS", "Saudi Pro League", "Eredivisie", "Primeira Liga"]
+    wrong_lgs   = [l for l in known_lgs if l != main_lg]
+    rng.shuffle(wrong_lgs)
+    choices = wrong_lgs[:3] + [main_lg]
+    rng.shuffle(choices)
+    pool.append({"q": f"🏆 In which league did {name} spend the most time in their career?",
+                 "choices": choices, "correct": main_lg,
+                 "category": "Main League"})
+
+    # World Cup (medium)
+    wc      = get_meta(target, "world_cup_winner", False)
+    correct_wc = "Yes" if wc else "No"
+    pool.append({"q": f"🌍 Did {name} win the FIFA World Cup?",
+                 "choices": ["Yes", "No"], "correct": correct_wc,
+                 "category": "World Cup"})
+
+    # Ballon d'Or count (hard — only if won at least one)
+    ballon = target.get("ballon_dor", 0) or 0
+    if ballon > 0:
+        wrong_bs = list({b for b in [1, 2, 3, 4, 5, 6, 7, 8] if b != ballon})
+        rng.shuffle(wrong_bs)
+        choices = [str(b) for b in wrong_bs[:3]] + [str(ballon)]
+        rng.shuffle(choices)
+        pool.append({"q": f"🥇 How many Ballon d'Or awards has {name} won?",
+                     "choices": choices, "correct": str(ballon),
+                     "category": "Ballon d'Or"})
+
+    # Birth decade (medium)
+    decade      = (target["birth_year"] // 10) * 10
+    wrong_dec   = [d for d in [1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000]
+                   if d != decade]
+    rng.shuffle(wrong_dec)
+    choices = [str(d) + "s" for d in wrong_dec[:3]] + [str(decade) + "s"]
+    rng.shuffle(choices)
+    pool.append({"q": f"🎂 Which decade was {name} born in?",
+                 "choices": choices, "correct": str(decade) + "s",
+                 "category": "Birth Decade"})
+
+    # Current / last club (medium)
+    curr = target.get("current_club", "")
+    if curr:
+        wrong_cc = list({p.get("current_club", "") for p in others
+                         if p.get("current_club") and p.get("current_club") != curr})
+        rng.shuffle(wrong_cc)
+        choices = wrong_cc[:3] + [curr]
+        rng.shuffle(choices)
+        pool.append({"q": f"🔵 What is {name}'s current or most recent club?",
+                     "choices": choices, "correct": curr,
+                     "category": "Current Club"})
+
+    # Pick 5: always lead with nationality (easy warm-up), then 4 random others
+    rng.shuffle(pool)
+    nat_q     = next((q for q in pool if q["category"] == "Nationality"), None)
+    remainder = [q for q in pool if q["category"] != "Nationality"]
+    selected  = ([nat_q] + remainder) if nat_q else pool
+    return selected[:5]
+
+def reset_btf(player: dict):
+    pool = get_filtered() or PLAYERS
+    st.session_state.btf_player    = player
+    st.session_state.btf_questions = generate_btf_questions(player, pool)
+    st.session_state.btf_q_idx     = 0
+    st.session_state.btf_selected  = None
+    st.session_state.btf_answers   = []
+    st.session_state.btf_won       = False
+    st.session_state.btf_gave_up   = False
+    st.session_state.btf_input_key += 1
 
 def get_filtered():
     return filter_players(
@@ -369,7 +497,7 @@ with st.sidebar:
     if st.session_state.history:
         for h in reversed(st.session_state.history[-5:]):
             icon = "✅" if h["won"] else "❌"
-            mode_icon = {"Career": "🏟️", "Guesser": "🟩", "Trophy": "🏆", "Daily": "📅"}.get(h["mode"], "🎮")
+            mode_icon = {"Career": "🏟️", "Guesser": "🟩", "Trophy": "🏆", "Daily": "📅", "Beat": "⚔️"}.get(h["mode"], "🎮")
             st.markdown(f"**{icon}{mode_icon} {h['name']}** — {h.get('points',0)} pts")
     else:
         st.caption("No rounds played yet")
@@ -402,6 +530,13 @@ with st.sidebar:
 - Career or Guesser mode  
 - Build your daily streak!  
 """)
+    with st.expander("Beat the Footballer"):
+        st.markdown("""
+- A star footballer challenges you  
+- Answer 5 multiple-choice questions about their career  
+- Get 3 or more right to **beat** them!  
+- Max 1 000 pts for a perfect 5/5  
+""")
 
     st.markdown("---")
     st.markdown("### 🤖 AI Career Sim")
@@ -421,16 +556,17 @@ with st.sidebar:
 # Main area — title
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Guesser</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 6 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 7 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai = st.tabs([
+tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf = st.tabs([
     "🏟️ Career Timeline",
     "🟩 Footballer Guesser",
     "🏆 Trophy Cabinet",
     "📅 Daily Challenge",
     "📊 Stats & Achievements",
     "🤖 AI Career Sim",
+    "⚔️ Beat the Footballer",
 ])
 
 # ─────────────────── helpers ──────────────────────────────────────────────────
@@ -1156,6 +1292,7 @@ with tab_stats:
     career_wins  = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Career")
     guesser_wins = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Guesser")
     trophy_wins  = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Trophy")
+    beat_wins    = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Beat")
 
     achievements = [
         {"icon": "🎯", "name": "First Blood",       "desc": "Win your first round",       "unlocked": wins_count >= 1},
@@ -1170,6 +1307,8 @@ with tab_stats:
         {"icon": "🏆", "name": "Trophy Hunter",      "desc": "Win 5 Trophy Cabinet rounds","unlocked": trophy_wins >= 5},
         {"icon": "📅", "name": "Daily Devotee",      "desc": "Get a 3-day daily streak",   "unlocked": daily_streak >= 3},
         {"icon": "📅", "name": "Daily Legend",       "desc": "Get a 7-day daily streak",   "unlocked": daily_streak >= 7},
+        {"icon": "⚔️", "name": "Giant Slayer",       "desc": "Beat a footballer 3 times",  "unlocked": beat_wins >= 3},
+        {"icon": "🥊", "name": "Unbeatable",         "desc": "Beat 10 footballers",         "unlocked": beat_wins >= 10},
     ]
 
     unlocked_count = sum(1 for a in achievements if a["unlocked"])
@@ -1261,148 +1400,254 @@ _AI_EXTRA_NATIONALITIES = [
 ]
 
 _AI_CAREER_STAGES = [
-    {"idx": 0, "id": "youth",   "name": "Youth Academy",       "age": "16–18", "icon": "🌱"},
-    {"idx": 1, "id": "debut",   "name": "Professional Debut",  "age": "18–22", "icon": "⚡"},
-    {"idx": 2, "id": "rise",    "name": "Rising Star",         "age": "22–26", "icon": "📈"},
-    {"idx": 3, "id": "peak",    "name": "Peak Years",          "age": "26–31", "icon": "🏆"},
-    {"idx": 4, "id": "veteran", "name": "Veteran Phase",       "age": "31–36", "icon": "🎯"},
+    {"idx": 0, "id": "youth",    "name": "Youth Academy",       "age": "16–18", "icon": "🌱"},
+    {"idx": 1, "id": "debut",    "name": "Professional Debut",  "age": "18–21", "icon": "⚡"},
+    {"idx": 2, "id": "rise",     "name": "Rising Star",         "age": "21–24", "icon": "📈"},
+    {"idx": 3, "id": "breakout", "name": "Breakout Season",     "age": "24–26", "icon": "💥"},
+    {"idx": 4, "id": "peak",     "name": "Peak Years",          "age": "26–29", "icon": "🏆"},
+    {"idx": 5, "id": "prime",    "name": "Prime Dominance",     "age": "29–32", "icon": "👑"},
+    {"idx": 6, "id": "veteran",  "name": "Veteran Phase",       "age": "32–36", "icon": "🎯"},
+    {"idx": 7, "id": "final",    "name": "Final Chapter",       "age": "36–40", "icon": "🏁"},
 ]
 
 
 def _stage_data(position_group: str) -> list:
-    """Return list of (narrative, choice_a, choice_b) tuples per stage.
+    """Return list of (narrative, choice_a, choice_b) tuples per stage (8 total).
     Each choice is (text: str, stat_delta: dict).
     """
     if position_group == "Forward":
         return [
+            # 0 – Youth Academy (16-18)
             (
                 "{name} arrived at the academy as a pacy {style}, terrorising defenders in reserve fixtures. "
                 "The first-team manager kept a close eye on this emerging talent.",
                 ("Push for a first-team debut this season",                  {"goals": 4,  "assists": 2,  "trophies": 0, "caps": 0}),
                 ("Accept a loan to a lower-league club for more minutes",    {"goals": 9,  "assists": 3,  "trophies": 0, "caps": 0}),
             ),
+            # 1 – Professional Debut (18-21)
             (
                 "Turning professional, {name}'s sharp movement and instinctive finishing attracted interest from across Europe. "
                 "Two very different paths lay ahead.",
                 ("Sign for a top-flight giant and fight for a squad role",   {"goals": 14, "assists": 8,  "trophies": 1, "caps": 5}),
                 ("Choose a mid-table club for guaranteed first-team minutes", {"goals": 22, "assists": 10, "trophies": 0, "caps": 8}),
             ),
+            # 2 – Rising Star (21-24)
             (
-                "A prolific season has made {name} one of the hottest properties in world football at just 22. "
-                "Champions League clubs are circling.",
+                "A prolific season has made {name} one of the hottest properties in world football. "
+                "Champions League clubs are circling and the phone hasn't stopped ringing.",
                 ("Join a Champions League contender",                        {"goals": 30, "assists": 15, "trophies": 2, "caps": 15}),
                 ("Become the undisputed main man at an ambitious club",      {"goals": 45, "assists": 18, "trophies": 1, "caps": 20}),
             ),
+            # 3 – Breakout Season (24-26)  ← NEW
+            (
+                "The footballing world is watching {name}. A spectacular individual campaign has produced record-breaking numbers "
+                "and sparked a transfer frenzy. Two life-changing paths have emerged.",
+                ("Stay and break the club scoring record before moving on",  {"goals": 38, "assists": 14, "trophies": 1, "caps": 12}),
+                ("Accept a marquee transfer and prove brilliance in a new top flight", {"goals": 30, "assists": 16, "trophies": 2, "caps": 10}),
+            ),
+            # 4 – Peak Years (26-29)
             (
                 "At 26, {name} is feared by every defence. A world-record offer arrives — "
                 "but so does the chance to cement legendary status at a beloved club.",
                 ("Accept the mega-money move to the wealthiest club",        {"goals": 42, "assists": 22, "trophies": 3, "caps": 20}),
                 ("Stay loyal and chase the title with a beloved club",       {"goals": 55, "assists": 28, "trophies": 4, "caps": 25}),
             ),
+            # 5 – Prime Dominance (29-32)  ← NEW
             (
-                "31 and still dangerous, {name} has accumulated silverware many players only dream of. "
-                "One final chapter remains to be written.",
+                "At 29, {name} stands at the very pinnacle of the sport. Every metric confirms what fans already know — "
+                "a generational talent defying gravity. Two epic challenges remain.",
+                ("Lead the national team on an international mission — a World Cup or continental title", {"goals": 22, "assists": 18, "trophies": 2, "caps": 28}),
+                ("Cement club immortality with back-to-back domestic and European crowns", {"goals": 38, "assists": 24, "trophies": 4, "caps": 14}),
+            ),
+            # 6 – Veteran Phase (32-36)
+            (
+                "32 and still dangerous, {name} has accumulated silverware many players only dream of. "
+                "One final chapter in the top flight remains to be written.",
                 ("Embrace a new challenge in MLS or the Saudi Pro League",   {"goals": 30, "assists": 12, "trophies": 1, "caps": 5}),
                 ("Stay in the top flight and mentor the next generation",    {"goals": 28, "assists": 18, "trophies": 2, "caps": 10}),
+            ),
+            # 7 – Final Chapter (36-40)  ← NEW
+            (
+                "The curtain is drawing close on an extraordinary career. {name}'s name is already written in football's golden book. "
+                "One final decision will shape the farewell.",
+                ("Return to the boyhood club for an emotional homecoming season", {"goals": 10, "assists": 8,  "trophies": 1, "caps": 0}),
+                ("Push on for one last trophy as a talismanic figure at a new club", {"goals": 14, "assists": 10, "trophies": 2, "caps": 0}),
             ),
         ]
     elif position_group == "Midfielder":
         return [
+            # 0 – Youth Academy (16-18)
             (
                 "{name} quickly stood out in the academy with a {style} game that made the coaches compare the youngster "
                 "to midfield legends of the past.",
                 ("Train extra hours on shooting and scoring",                {"goals": 5,  "assists": 6,  "trophies": 0, "caps": 0}),
                 ("Focus on passing range, vision, and game management",      {"goals": 2,  "assists": 12, "trophies": 0, "caps": 0}),
             ),
+            # 1 – Professional Debut (18-21)
             (
                 "Two clubs made compelling offers. {name}'s ability to control the tempo of matches was already evident — "
                 "but where to develop that talent best?",
                 ("Sign for a glamour club as a squad midfielder",            {"goals": 8,  "assists": 14, "trophies": 1, "caps": 4}),
                 ("Choose a team where {name} will be the heartbeat",         {"goals": 12, "assists": 20, "trophies": 0, "caps": 9}),
             ),
+            # 2 – Rising Star (21-24)
             (
-                "22 and flourishing, {name}'s range of passing and box-to-box energy are drawing national headlines. "
+                "21 and flourishing, {name}'s range of passing and box-to-box energy are drawing national headlines. "
                 "A pivotal transfer window opens.",
                 ("Move to a top-four side fighting for the title",           {"goals": 18, "assists": 35, "trophies": 2, "caps": 18}),
                 ("Lead the midfield at an ambitious club building for glory",{"goals": 25, "assists": 40, "trophies": 1, "caps": 22}),
             ),
+            # 3 – Breakout Season (24-26)  ← NEW
+            (
+                "{name}'s vision and technique have made the back pages every week. A defining breakout campaign has earned rave reviews, "
+                "and two compelling opportunities have arrived simultaneously.",
+                ("Win Player of the Season and sign a bumper new deal",      {"goals": 18, "assists": 28, "trophies": 1, "caps": 14}),
+                ("Accept a high-profile move to a title contender",          {"goals": 14, "assists": 32, "trophies": 2, "caps": 10}),
+            ),
+            # 4 – Peak Years (26-29)
             (
                 "At 26, {name} is arguably the best midfielder in the league. A historic club wants their new midfield general "
                 "and they're willing to pay.",
                 ("Join the historic giant and chase the Champions League",   {"goals": 22, "assists": 42, "trophies": 3, "caps": 22}),
                 ("Stay and break the all-time appearances record",           {"goals": 28, "assists": 50, "trophies": 3, "caps": 28}),
             ),
+            # 5 – Prime Dominance (29-32)  ← NEW
             (
-                "31 and still covering every blade of grass, {name}'s experience compensates for whatever edge of pace "
+                "At 29, {name} is the fulcrum around which everything revolves. Captaincy beckons and legacy is being built game by game.",
+                ("Captain your club to a historic league and cup double",    {"goals": 20, "assists": 44, "trophies": 3, "caps": 20}),
+                ("Become the driving force behind your nation's deepest tournament run in decades", {"goals": 14, "assists": 38, "trophies": 2, "caps": 32}),
+            ),
+            # 6 – Veteran Phase (32-36)
+            (
+                "32 and still covering every blade of grass, {name}'s experience compensates for whatever edge of pace "
                 "time has taken. The question now is legacy.",
                 ("Move abroad to a new league for one last challenge",       {"goals": 12, "assists": 25, "trophies": 1, "caps": 8}),
                 ("Stay in domestic football until the very last whistle",    {"goals": 15, "assists": 30, "trophies": 2, "caps": 12}),
             ),
+            # 7 – Final Chapter (36-40)  ← NEW
+            (
+                "A storied midfield career is entering its final act. {name} reads the game as well as ever, even if the legs have slowed. "
+                "Where does the last chapter unfold?",
+                ("Return to the club where it all began for one last emotional season", {"goals": 8,  "assists": 20, "trophies": 1, "caps": 0}),
+                ("Accept a player-coach role to pass on a lifetime of football wisdom", {"goals": 5,  "assists": 16, "trophies": 2, "caps": 0}),
+            ),
         ]
     elif position_group == "Defender":
         return [
+            # 0 – Youth Academy (16-18)
             (
                 "{name} was a commanding {style} from day one of the academy, throwing themselves into every training "
                 "session with fearless determination.",
                 ("Develop as a ball-playing sweeper with attacking instincts",{"goals": 3, "assists": 5,  "trophies": 0, "caps": 0}),
                 ("Master the fundamentals — positioning, heading, tackling", {"goals": 1, "assists": 3,  "trophies": 1, "caps": 0}),
             ),
+            # 1 – Professional Debut (18-21)
             (
                 "Defenders mature late, but {name} was ahead of schedule. Two clubs wanted to sign the young stopper — "
                 "one a title contender, one desperate for defensive solidarity.",
                 ("Join the title contender as a squad defender",             {"goals": 2, "assists": 8,  "trophies": 2, "caps": 4}),
                 ("Anchor the defence at a mid-table club as undisputed no. 1",{"goals": 3, "assists": 10, "trophies": 0, "caps": 9}),
             ),
+            # 2 – Rising Star (21-24)
             (
-                "22 and reliable as a rock, {name} is now one of the most sought-after defenders on the continent. "
+                "21 and reliable as a rock, {name} is now one of the most sought-after defenders on the continent. "
                 "A powerhouse club wants to build their entire backline around this talent.",
                 ("Sign for the powerhouse — elite level, intense competition",{"goals": 5, "assists": 15, "trophies": 3, "caps": 16}),
                 ("Become the captain of a title-chasing side",               {"goals": 8, "assists": 20, "trophies": 2, "caps": 22}),
             ),
+            # 3 – Breakout Season (24-26)  ← NEW
+            (
+                "{name} has become the most talked-about defender on the continent after a near-impenetrable season. "
+                "Europe's elite are queuing up with proposals.",
+                ("Lead a charge deep into the Champions League as the defensive cornerstone", {"goals": 6, "assists": 16, "trophies": 2, "caps": 14}),
+                ("Sign for a rebuilding powerhouse who promise to build around {name}", {"goals": 8, "assists": 20, "trophies": 1, "caps": 10}),
+            ),
+            # 4 – Peak Years (26-29)
             (
                 "At 26, {name} is at the peak of defensive powers. Clean sheets are a regular occurrence and "
                 "a huge club arrives with a lavish offer.",
                 ("Join the mega-club and play in the biggest matches",       {"goals": 5, "assists": 18, "trophies": 3, "caps": 22}),
                 ("Become a club legend — captain them to an unlikely title", {"goals": 8, "assists": 22, "trophies": 4, "caps": 28}),
             ),
+            # 5 – Prime Dominance (29-32)  ← NEW
             (
-                "31 and still a rock. Experience makes {name} even more dangerous — anticipation and positioning "
+                "29 and utterly dominant. {name} is captaining teams to silverware, marshalling defences with telepathic leadership. "
+                "Two landmark opportunities have emerged.",
+                ("Skipper the national team to World Cup glory",             {"goals": 4, "assists": 14, "trophies": 3, "caps": 30}),
+                ("Lead your club to an unprecedented clean-sheet record and title glory", {"goals": 7, "assists": 20, "trophies": 4, "caps": 16}),
+            ),
+            # 6 – Veteran Phase (32-36)
+            (
+                "32 and still a rock. Experience makes {name} even more dangerous — anticipation and positioning "
                 "compensate for any reduction in pace.",
                 ("Accept a final challenge in a top foreign league",         {"goals": 3, "assists": 10, "trophies": 1, "caps": 6}),
                 ("See out the career in the domestic top flight",            {"goals": 4, "assists": 12, "trophies": 2, "caps": 10}),
             ),
+            # 7 – Final Chapter (36-40)  ← NEW
+            (
+                "36 and still imposing. {name} has one final gift to give the game before hanging up the boots. "
+                "How does the legend's story end?",
+                ("Return to the community club roots for a poignant farewell season", {"goals": 2, "assists": 6,  "trophies": 1, "caps": 0}),
+                ("Carry an emerging young club into a trophy final as the experienced guardian", {"goals": 3, "assists": 8, "trophies": 2, "caps": 0}),
+            ),
         ]
     else:  # Goalkeeper
         return [
+            # 0 – Youth Academy (16-18)
             (
                 "At 16, {name} had the reflexes of a cat and the presence of a {style}. "
                 "The goalkeeping coach predicted an international career from the very first training session.",
                 ("Work obsessively on shot-stopping, reflexes and positioning",{"goals": 0, "assists": 0, "trophies": 1, "caps": 0}),
                 ("Develop sweeper-keeper skills and precise distribution",    {"goals": 0, "assists": 2, "trophies": 0, "caps": 0}),
             ),
+            # 1 – Professional Debut (18-21)
             (
                 "{name} is 18 and ready for the professional stage. Goalkeepers need experience — "
                 "but two very different paths are available.",
                 ("Fight for a spot at a top-flight club's first team",        {"goals": 0, "assists": 2, "trophies": 1, "caps": 3}),
                 ("Take a loan to a lower-league club for 200 games in two seasons",{"goals": 0, "assists": 4, "trophies": 0, "caps": 6}),
             ),
+            # 2 – Rising Star (21-24)
             (
                 "A string of brilliant performances has made {name} one of the most coveted keepers in Europe. "
                 "Two clubs are desperate to sign them.",
                 ("Join a Champions League regular at a premium price",        {"goals": 0, "assists": 5, "trophies": 3, "caps": 16}),
                 ("Become the undisputed no. 1 at a passionate mid-table club",{"goals": 0, "assists": 8, "trophies": 2, "caps": 22}),
             ),
+            # 3 – Breakout Season (24-26)  ← NEW
+            (
+                "{name}'s shot-stopping brilliance has drawn comparisons to the all-time greats. After a season of jaw-dropping saves, "
+                "two landmark offers have materialised.",
+                ("Win the Golden Glove and sign a bumper new deal at your current club", {"goals": 0, "assists": 4, "trophies": 2, "caps": 14}),
+                ("Accept a transfer to a club where the Champions League is a guaranteed stage", {"goals": 0, "assists": 3, "trophies": 1, "caps": 10}),
+            ),
+            # 4 – Peak Years (26-29)
             (
                 "26 and at the absolute peak of their powers, {name} is being talked about as the best goalkeeper "
                 "in the world. A historic contract offer arrives.",
                 ("Sign for the wealthiest club and target every trophy",      {"goals": 0, "assists": 6, "trophies": 4, "caps": 20}),
                 ("Remain loyal and carry the beloved club to an unlikely title",{"goals": 0, "assists": 8, "trophies": 3, "caps": 26}),
             ),
+            # 5 – Prime Dominance (29-32)  ← NEW
             (
-                "31 is young for a goalkeeper. {name} can realistically play at the top level for five more years — "
+                "29 and unquestionably the best goalkeeper in the world. {name} is as commanding in the dressing room as in the goal. "
+                "Two monumental challenges beckon.",
+                ("Lead the national team to the World Cup final as the last line of defence", {"goals": 0, "assists": 4, "trophies": 2, "caps": 30}),
+                ("Mastermind a historic treble — league, cup, and Champions League in one season", {"goals": 0, "assists": 5, "trophies": 3, "caps": 14}),
+            ),
+            # 6 – Veteran Phase (32-36)
+            (
+                "32 is still young for a goalkeeper. {name} can realistically play at the top level for several more years — "
                 "but where?",
                 ("Move to a glamour league abroad for a new adventure",       {"goals": 0, "assists": 5, "trophies": 1, "caps": 5}),
                 ("Stay as the evergreen no. 1 in the domestic top flight",    {"goals": 0, "assists": 6, "trophies": 2, "caps": 10}),
+            ),
+            # 7 – Final Chapter (36-40)  ← NEW
+            (
+                "Goalkeepers age like fine wine, and at 36 {name} is still proving the point. "
+                "But the day of retirement is on the horizon. How does the final chapter read?",
+                ("Return to the club where the story began — the prodigal no. 1 comes home", {"goals": 0, "assists": 3, "trophies": 1, "caps": 0}),
+                ("Stay at the top as a shot-stopper-mentor hybrid, inspiring the next generation", {"goals": 0, "assists": 4, "trophies": 2, "caps": 0}),
             ),
         ]
 
@@ -1512,18 +1757,18 @@ def _ai_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dic
 
 
 def _career_rating(stats: dict) -> tuple[int, str]:
-    """Return (0-100 rating, badge label) based on accumulated stats."""
+    """Return (0-100 rating, badge label) based on accumulated stats (8-stage career)."""
     score = (
         stats["goals"] * 1.0
         + stats["assists"] * 0.8
         + stats["trophies"] * 15
         + stats["caps"] * 0.5
     )
-    if score >= 350: return 97, "🐐 All-Time Legend"
-    if score >= 280: return 93, "⭐ World-Class"
-    if score >= 210: return 88, "🌟 Elite"
-    if score >= 140: return 82, "📈 Very Good"
-    if score >= 80:  return 75, "✅ Solid Pro"
+    if score >= 560: return 97, "🐐 All-Time Legend"
+    if score >= 440: return 93, "⭐ World-Class"
+    if score >= 330: return 88, "🌟 Elite"
+    if score >= 220: return 82, "📈 Very Good"
+    if score >= 130: return 75, "✅ Solid Pro"
     return 65, "🎓 Journeyman"
 
 
@@ -1727,4 +1972,195 @@ with tab_ai:
             st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
             st.session_state.ai_history          = []
             st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 7 — BEAT THE FOOTBALLER
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_btf:
+    st.markdown("## ⚔️ Beat the Footballer")
+    st.markdown(
+        "A legendary footballer challenges you to a career trivia showdown! "
+        "Answer **5 questions** about their career — get **3 or more correct** to beat them!"
+    )
+
+    pool = get_filtered()
+
+    col_btn_btf, _ = st.columns([1, 3])
+    with col_btn_btf:
+        if st.button("🎲 New Opponent", key="new_btf"):
+            if pool:
+                reset_btf(pick_random_player(pool))
+            else:
+                st.warning("No players match the current filters.")
+
+    bp = st.session_state.btf_player
+
+    if bp is None:
+        st.info("👈 Click **New Opponent** to start a challenge!")
+    else:
+        questions  = st.session_state.btf_questions
+        q_idx      = st.session_state.btf_q_idx
+        answers    = st.session_state.btf_answers
+        btf_gave_up = st.session_state.btf_gave_up
+        flag_btf   = FLAGS.get(bp["nationality"], "🌍")
+
+        correct          = sum(answers)
+        answered         = len(answers)
+        footballer_score = answered - correct
+
+        # ── Opponent card ─────────────────────────────────────────────────────
+        st.markdown(
+            f'<div style="background:rgba(255,100,0,0.12);border:2px solid #ff6b00;'
+            f'border-radius:14px;padding:16px 20px;margin:12px 0;">'
+            f'<div style="font-size:1.4rem;font-weight:800;color:#ff8c00;">⚔️ Your Opponent</div>'
+            f'<div style="font-size:1.2rem;color:white;margin-top:4px;">'
+            f'{flag_btf} <strong>{bp["name"]}</strong></div>'
+            f'<div style="color:#aaa;font-size:0.9rem;">'
+            f'{bp["position_group"]} · {bp["nationality"]} · {bp.get("difficulty","?")} difficulty'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Live score bar ────────────────────────────────────────────────────
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            st.markdown(
+                f'<div class="score-box"><div class="score-val">{correct} ⚽</div>'
+                f'<div class="score-lbl">You</div></div>',
+                unsafe_allow_html=True,
+            )
+        with sc2:
+            st.markdown(
+                f'<div class="score-box"><div class="score-val">{answered} / 5</div>'
+                f'<div class="score-lbl">Questions</div></div>',
+                unsafe_allow_html=True,
+            )
+        with sc3:
+            first_name = bp["name"].split()[0]
+            st.markdown(
+                f'<div class="daily-box"><div class="score-val">{footballer_score} ⚽</div>'
+                f'<div class="score-lbl">{first_name}</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("---")
+
+        # ── Game over (all 5 answered, or gave up) ────────────────────────────
+        if q_idx >= len(questions) or btf_gave_up:
+            if btf_gave_up:
+                st.markdown(
+                    f'<div class="result-wrong">🏳️ You gave up! {correct}/{answered} correct before quitting.</div>',
+                    unsafe_allow_html=True,
+                )
+            elif correct >= 3:
+                pts_map = {5: 1000, 4: 750, 3: 500}
+                pts     = pts_map.get(correct, 500)
+                st.markdown(
+                    f'<div class="result-correct">🏆 You beat {bp["name"]}! {correct}/5 correct — +{pts} pts!</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                pts_map = {2: 250, 1: 100, 0: 0}
+                pts     = pts_map.get(correct, 0)
+                msg     = f" — +{pts} pts for trying!" if pts > 0 else ""
+                st.markdown(
+                    f'<div class="result-wrong">😔 {bp["name"]} beat you! ({correct}/5 correct){msg}</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # Question review
+            st.markdown("### 📋 Question Review")
+            for i, (q_item, was_correct) in enumerate(zip(questions[:len(answers)], answers)):
+                icon = "✅" if was_correct else "❌"
+                st.markdown(f"**{icon} Q{i+1}: {q_item['q']}**")
+                st.markdown(f"&nbsp;&nbsp;&nbsp;➜ Correct answer: **{q_item['correct']}**")
+
+            if st.button("▶️ New Challenge", key="btf_play_again"):
+                pool = get_filtered()
+                if pool:
+                    reset_btf(pick_random_player(pool))
+                    st.rerun()
+
+        # ── Showing feedback for current question ─────────────────────────────
+        elif st.session_state.btf_selected is not None:
+            q        = questions[q_idx]
+            selected = st.session_state.btf_selected
+            is_correct = (selected == q["correct"])
+
+            st.markdown(f"### Q{q_idx + 1} / 5 — {q['category']}")
+            st.markdown(f"#### {q['q']}")
+
+            if is_correct:
+                st.markdown(
+                    f'<div class="result-correct">✅ Correct! The answer is <b>{q["correct"]}</b></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="result-wrong">❌ Wrong! You said <b>{selected}</b> — '
+                    f'the answer is <b>{q["correct"]}</b></div>',
+                    unsafe_allow_html=True,
+                )
+
+            next_label = "▶️ Next Question" if q_idx < len(questions) - 1 else "🏁 See Results"
+            if st.button(next_label, key="btf_next"):
+                st.session_state.btf_answers.append(is_correct)
+                st.session_state.btf_q_idx   += 1
+                st.session_state.btf_selected  = None
+
+                # Record stats when last question is answered
+                new_q_idx  = st.session_state.btf_q_idx
+                if new_q_idx >= len(questions):
+                    new_correct = sum(st.session_state.btf_answers)
+                    won         = new_correct >= 3
+                    st.session_state.btf_won = won
+                    if won:
+                        pts = {5: 1000, 4: 750, 3: 500}.get(new_correct, 500)
+                        st.session_state.total_score   += pts
+                        st.session_state.rounds_played += 1
+                        st.session_state.win_streak    += 1
+                        st.session_state.best_streak    = max(
+                            st.session_state.best_streak, st.session_state.win_streak
+                        )
+                        st.session_state.history.append(
+                            {"mode": "Beat", "name": bp["name"], "won": True, "points": pts}
+                        )
+                    else:
+                        pts = {2: 250, 1: 100, 0: 0}.get(new_correct, 0)
+                        st.session_state.total_score   += pts
+                        st.session_state.rounds_played += 1
+                        st.session_state.win_streak     = 0
+                        st.session_state.history.append(
+                            {"mode": "Beat", "name": bp["name"], "won": False, "points": pts}
+                        )
+                st.rerun()
+
+        # ── Awaiting answer for current question ──────────────────────────────
+        else:
+            q = questions[q_idx]
+            st.markdown(f"### Q{q_idx + 1} / 5 — {q['category']}")
+            st.markdown(f"#### {q['q']}")
+
+            btn_cols = st.columns(2)
+            for i, choice in enumerate(q["choices"]):
+                with btn_cols[i % 2]:
+                    if st.button(
+                        choice,
+                        key=f"btf_choice_{st.session_state.btf_input_key}_{q_idx}_{i}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.btf_selected = choice
+                        st.rerun()
+
+            st.markdown("---")
+            col_quit, _ = st.columns([1, 3])
+            with col_quit:
+                if st.button("🏳️ Give Up", key="btf_giveup"):
+                    st.session_state.btf_gave_up   = True
+                    st.session_state.rounds_played += 1
+                    st.session_state.win_streak     = 0
+                    st.session_state.history.append(
+                        {"mode": "Beat", "name": bp["name"], "won": False, "points": 0}
+                    )
+                    st.rerun()
 
