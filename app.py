@@ -241,8 +241,8 @@ DEFAULTS = {
     "filter_difficulty":   "All",
     "filter_continent":    "All Continents",
     "filter_world_cup":    "All",
-    # AI Career Simulator
-    "openai_api_key":      "",
+    # AI Career Simulator — seed from Streamlit secrets if available
+    "openai_api_key":      st.secrets.get("OPENAI_API_KEY", ""),
     "ai_player":           None,   # {name, nationality, position_group, style}
     "ai_stage_idx":        -1,     # -1=not started, 0-7=stage, 8=ended
     "ai_awaiting_outcome": False,  # True=user chose, showing outcome; False=showing choices
@@ -540,6 +540,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### 🤖 AI Career Sim")
+    _key_from_secrets = bool(st.secrets.get("OPENAI_API_KEY", ""))
     ai_key = st.text_input(
         "OpenAI API Key (optional)",
         type="password",
@@ -550,7 +551,10 @@ with st.sidebar:
     if ai_key:
         st.session_state.openai_api_key = ai_key
     if st.session_state.openai_api_key:
-        st.caption("✅ AI narratives enabled")
+        if _key_from_secrets and not ai_key:
+            st.caption("✅ AI narratives enabled (key loaded from secrets)")
+        else:
+            st.caption("✅ AI narratives enabled")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Main area — title
