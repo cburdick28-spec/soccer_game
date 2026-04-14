@@ -514,7 +514,8 @@ PLAYERS = [
             }
         ],
         "trophies": [
-            "League Cup 2008"
+            "League Cup 2021 (Spurs)",
+            "England all-time leading scorer"
         ],
         "ballon_dor": 0,
         "difficulty": "Easy"
@@ -1736,9 +1737,9 @@ PLAYERS = [
             {
                 "club": "Internazionale",
                 "league": "Serie A",
-                "years": "2001-01",
+                "years": "2001 (loan)",
                 "start": 2001,
-                "end": 2001
+                "end": 2002
             },
             {
                 "club": "AC Milan",
@@ -2492,7 +2493,7 @@ PLAYERS = [
             "Premier League 2013",
             "FA Cup 2016",
             "Europa League 2017",
-            "League Cup x5"
+            "League Cup 2017"
         ],
         "ballon_dor": 0,
         "difficulty": "Medium"
