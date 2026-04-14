@@ -1,11 +1,13 @@
 """
 app.py  —  ⚽ Soccer Career Guesser  (Advanced Edition)
-Five game modes:
+Seven game modes:
   1. Career Timeline  – reveal clubs one-by-one and guess the footballer
   2. Footballer Guesser – Wordle-style 9-attribute feedback grid
   3. Trophy Cabinet – reveal trophies one-by-one and guess the footballer
   4. Daily Challenge – same mystery player for everyone, seeded by today's date
   5. Statistics & Achievements
+  6. AI Career Simulator – guide your own footballer from academy to retirement
+  7. Beat the Footballer – face a star in a 5-question career trivia duel
 """
 
 import random
