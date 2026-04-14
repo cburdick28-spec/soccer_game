@@ -261,6 +261,27 @@ DEFAULTS = {
     "nfl_coach_stats":         {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0},
     "nfl_coach_history":       [],
     "nfl_coach_prefill":       None,   # {name} pre-filled from NFL player sim transition
+    # NBA Player Sim
+    "nba_player":           None,   # {name, position_group, style}
+    "nba_stage_idx":        -1,     # -1=not started, 0-7=stage, 8=ended
+    "nba_awaiting_outcome": False,
+    "nba_chosen_option":    None,
+    "nba_narrative":        "",
+    "nba_choices":          [],
+    "nba_outcome_text":     "",
+    "nba_stats":            {"points": 0, "rebounds": 0, "assists": 0, "all_stars": 0, "championships": 0},
+    "nba_history":          [],
+    # NBA Coach Sim
+    "nba_coach_manager":          None,   # {name, philosophy}
+    "nba_coach_stage_idx":        -1,
+    "nba_coach_awaiting_outcome": False,
+    "nba_coach_chosen_option":    None,
+    "nba_coach_narrative":        "",
+    "nba_coach_choices":          [],
+    "nba_coach_outcome_text":     "",
+    "nba_coach_stats":            {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0},
+    "nba_coach_history":          [],
+    "nba_coach_prefill":          None,   # {name} pre-filled from NBA player sim transition
 }
 
 for k, v in DEFAULTS.items():
@@ -385,16 +406,18 @@ with st.sidebar:
 # Main area — title
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Guesser</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · AI-powered career &amp; coaching simulations</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · AI-powered career &amp; coaching simulations · Soccer, NFL &amp; NBA</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_daily, tab_stats, tab_ai, tab_coach, tab_nfl_player, tab_nfl_coach = st.tabs([
+tab_daily, tab_stats, tab_ai, tab_coach, tab_nfl_player, tab_nfl_coach, tab_nba_player, tab_nba_coach = st.tabs([
     "📅 Daily Challenge",
     "📊 Stats & Achievements",
     "🤖 AI Career Sim",
     "🧑‍💼 Coach Career Sim",
     "🏈 NFL Player Sim",
     "🏈 NFL Head Coach",
+    "🏀 NBA Player Sim",
+    "🏀 NBA Head Coach",
 ])
 
 # ─────────────────── helpers ──────────────────────────────────────────────────
@@ -2928,4 +2951,1152 @@ with tab_nfl_coach:
             st.session_state.nfl_coach_outcome_text     = ""
             st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
             st.session_state.nfl_coach_history          = []
+            st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NBA PLAYER SIM — constants, helpers, tab rendering
+# ══════════════════════════════════════════════════════════════════════════════
+
+_NBA_PLAYING_STYLES = [
+    "Floor General",
+    "Scoring Machine",
+    "3-and-D Specialist",
+    "Rim Protector",
+    "Slasher",
+    "Post Scorer",
+    "Two-Way Wing",
+    "Elite Facilitator",
+    "Glass Cleaner",
+    "Perimeter Lockdown",
+]
+
+_NBA_POSITION_GROUPS = ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"]
+
+_NBA_CAREER_STAGES = [
+    {"idx": 0, "id": "high_school", "name": "High School Phenom",       "age": "16\u201318", "icon": "\U0001f331"},
+    {"idx": 1, "id": "college",     "name": "College / Pre-Draft",      "age": "18\u201321", "icon": "\U0001f393"},
+    {"idx": 2, "id": "nba_draft",   "name": "NBA Draft & Rookie Year",  "age": "21\u201322", "icon": "\u26a1"},
+    {"idx": 3, "id": "rising",      "name": "Rising Star",              "age": "22\u201324", "icon": "\U0001f4c8"},
+    {"idx": 4, "id": "breakout",    "name": "Breakout Season",          "age": "24\u201326", "icon": "\U0001f4a5"},
+    {"idx": 5, "id": "peak",        "name": "Peak Years",               "age": "26\u201330", "icon": "\U0001f3c6"},
+    {"idx": 6, "id": "veteran",     "name": "Veteran Phase",            "age": "30\u201335", "icon": "\U0001f451"},
+    {"idx": 7, "id": "final",       "name": "Final Chapter",            "age": "35\u201340", "icon": "\U0001f3c1"},
+]
+
+
+def _nba_stage_data(position_group: str) -> list:
+    """Return list of (narrative, choice_a, choice_b) tuples for 8 NBA career stages.
+    Each choice is (text: str, stat_delta: dict) where stats are:
+      points, rebounds, assists, all_stars, championships.
+    """
+    if position_group == "Point Guard":
+        return [
+            # 0 – High School Phenom (16-18)
+            (
+                "{name} was the talk of every grassroots circuit, a {style} who saw the floor like a chess "
+                "grandmaster at 16. The recruitment letters filled two bookshelves before junior year was over.",
+                ("Commit to a powerhouse program to chase a national championship",
+                 {"points": 600, "rebounds": 150, "assists": 400, "all_stars": 0, "championships": 0}),
+                ("Choose a program where you'll be the undisputed starter from day one",
+                 {"points": 900, "rebounds": 200, "assists": 650, "all_stars": 0, "championships": 0}),
+            ),
+            # 1 – College / Pre-Draft (18-21)
+            (
+                "Within weeks of arriving on campus, {name} had rewritten the freshman record book. "
+                "A {style} who turned assists into art, NBA scouts circled every single game.",
+                ("Stay all three years, polish every weakness, and lead the program to March glory",
+                 {"points": 1200, "rebounds": 300, "assists": 900, "all_stars": 0, "championships": 0}),
+                ("Declare for the Draft after two dominant seasons at the peak of college form",
+                 {"points": 900, "rebounds": 200, "assists": 700, "all_stars": 0, "championships": 0}),
+            ),
+            # 2 – NBA Draft & Rookie Year (21-22)
+            (
+                "Draft night made it official. {name} was called to the stage and handed a jersey in front of "
+                "a thunderous arena. The vision and IQ translated to the NBA immediately.",
+                ("Start from day one \u2014 embrace the Rookie of the Year race and command the offense",
+                 {"points": 1400, "rebounds": 200, "assists": 600, "all_stars": 0, "championships": 0}),
+                ("Come off the bench, absorb the league, and earn the starting job by the All-Star break",
+                 {"points": 900, "rebounds": 150, "assists": 450, "all_stars": 0, "championships": 0}),
+            ),
+            # 3 – Rising Star (22-24)
+            (
+                "The league was put on notice. {name}'s pick-and-roll execution and pinpoint passing had "
+                "defensive coordinators sweating. The first All-Star conversation started in the barbershops.",
+                ("Sign a prove-it extension and bet on yourself during a playoff push",
+                 {"points": 2000, "rebounds": 350, "assists": 1100, "all_stars": 1, "championships": 0}),
+                ("Request a trade to a contender and show the league you can run a winning team",
+                 {"points": 1800, "rebounds": 300, "assists": 900, "all_stars": 0, "championships": 0}),
+            ),
+            # 4 – Breakout Season (24-26)
+            (
+                "The breakout arrived in spectacular fashion. {name} was posting 25-and-10 with shooting "
+                "splits the internet called 'video game numbers'. The MVP ballot debate started before Christmas.",
+                ("Lead the franchise deep into the playoffs \u2014 a Finals run begins now",
+                 {"points": 2500, "rebounds": 400, "assists": 1400, "all_stars": 1, "championships": 0}),
+                ("Sign a supermax extension and become the face of the franchise for the next decade",
+                 {"points": 2200, "rebounds": 350, "assists": 1200, "all_stars": 1, "championships": 0}),
+            ),
+            # 5 – Peak Years (26-30)
+            (
+                "Operating at an elite level only the chosen few ever reach, {name} was a walking "
+                "triple-double threat every night. Championships and legacy were the only conversations left.",
+                ("Win the NBA championship and cement a legendary status",
+                 {"points": 3000, "rebounds": 500, "assists": 1800, "all_stars": 1, "championships": 1}),
+                ("Chase All-NBA honours and build a Hall of Fame stat line for the ages",
+                 {"points": 3400, "rebounds": 450, "assists": 2000, "all_stars": 1, "championships": 0}),
+            ),
+            # 6 – Veteran Phase (30-35)
+            (
+                "Thirty and still defying logic, {name} had evolved into the ultimate floor general \u2014 "
+                "reading defences before they formed and elevating every teammate around them.",
+                ("Join a contender as a veteran leader and chase one final ring",
+                 {"points": 2200, "rebounds": 350, "assists": 1200, "all_stars": 1, "championships": 1}),
+                ("Stay with the beloved franchise and mentor the next generation of guards",
+                 {"points": 1800, "rebounds": 300, "assists": 1000, "all_stars": 0, "championships": 0}),
+            ),
+            # 7 – Final Chapter (35-40)
+            (
+                "Father Time had never met a point guard like {name}. The vision was sharper than ever "
+                "even as the explosiveness faded. One final chapter remained to write.",
+                ("Return to the franchise where it all started for an emotional farewell season",
+                 {"points": 900, "rebounds": 150, "assists": 500, "all_stars": 0, "championships": 0}),
+                ("Join a title contender as a savvy veteran and push for a storybook ring exit",
+                 {"points": 700, "rebounds": 100, "assists": 400, "all_stars": 0, "championships": 1}),
+            ),
+        ]
+    elif position_group == "Shooting Guard":
+        return [
+            # 0 – High School Phenom (16-18)
+            (
+                "Gym rats across the country knew the name before anyone else did. {name}, a relentless {style}, "
+                "was dropping 40-point performances before hitting 17 while breaking records with effortless style.",
+                ("Commit to a powerhouse program and pursue a national championship",
+                 {"points": 700, "rebounds": 200, "assists": 250, "all_stars": 0, "championships": 0}),
+                ("Choose the program that promises the most shots and full offensive freedom",
+                 {"points": 1000, "rebounds": 250, "assists": 300, "all_stars": 0, "championships": 0}),
+            ),
+            # 1 – College / Pre-Draft (18-21)
+            (
+                "College defenders had nightmares about {name}. A {style} who could get a bucket anywhere "
+                "on the floor, the scoring titles came in consecutive seasons and scouts had made up their minds.",
+                ("Stay and become a college legend, chasing championships and refinement",
+                 {"points": 1600, "rebounds": 450, "assists": 500, "all_stars": 0, "championships": 0}),
+                ("Declare early \u2014 the jump shot and athleticism are already NBA-ready",
+                 {"points": 1100, "rebounds": 300, "assists": 350, "all_stars": 0, "championships": 0}),
+            ),
+            # 2 – NBA Draft & Rookie Year (21-22)
+            (
+                "Selected in the lottery, {name} arrived to the NBA with one mission \u2014 put the ball in the basket. "
+                "Every defender in the league was already planning their counter.",
+                ("Start immediately and be the designated scorer from night one",
+                 {"points": 1600, "rebounds": 300, "assists": 300, "all_stars": 0, "championships": 0}),
+                ("Accept a reserve role, study the pace, and be unstoppable by year two",
+                 {"points": 1000, "rebounds": 200, "assists": 200, "all_stars": 0, "championships": 0}),
+            ),
+            # 3 – Rising Star (22-24)
+            (
+                "The cold-blooded efficiency was there from the opening tip. {name}'s ability to create off the "
+                "dribble and knock down threes had coaches drawing up double-teams every possession.",
+                ("Extend with the franchise and become a go-to scorer on a playoff team",
+                 {"points": 2400, "rebounds": 500, "assists": 500, "all_stars": 1, "championships": 0}),
+                ("Force a trade to a contender and prove the big-shot gene in high-stakes moments",
+                 {"points": 2000, "rebounds": 400, "assists": 400, "all_stars": 0, "championships": 0}),
+            ),
+            # 4 – Breakout Season (24-26)
+            (
+                "A 30-point season and a first All-Star start announced {name} to the entire basketball world. "
+                "The step-back three was now illegal in the eyes of every opposing coach.",
+                ("Carry the team on a surprise playoff run and prove you're a franchise cornerstone",
+                 {"points": 3000, "rebounds": 600, "assists": 600, "all_stars": 1, "championships": 0}),
+                ("Pursue a scoring title and establish yourself as the premier scorer of your generation",
+                 {"points": 3500, "rebounds": 550, "assists": 550, "all_stars": 1, "championships": 0}),
+            ),
+            # 5 – Peak Years (26-30)
+            (
+                "Two-time All-Star and climbing. {name}'s mid-range game was poetry, the three-point stroke "
+                "a weapon of mass destruction. Now came the moment to convert excellence into eternal legacy.",
+                ("Win the championship and prove the offensive brilliance translates to titles",
+                 {"points": 3500, "rebounds": 700, "assists": 700, "all_stars": 1, "championships": 1}),
+                ("Win two scoring titles back-to-back and put your name on the all-time scoring list",
+                 {"points": 4200, "rebounds": 650, "assists": 600, "all_stars": 1, "championships": 0}),
+            ),
+            # 6 – Veteran Phase (30-35)
+            (
+                "The explosiveness had mellowed into craft. {name}'s pull-up jumper remained unguardable, "
+                "the basketball IQ compounding with every passing season.",
+                ("Chase one more championship with a contender as the trusted second option",
+                 {"points": 2200, "rebounds": 450, "assists": 400, "all_stars": 0, "championships": 1}),
+                ("Remain the franchise centrepiece and mentor emerging shooting guards",
+                 {"points": 2800, "rebounds": 500, "assists": 450, "all_stars": 1, "championships": 0}),
+            ),
+            # 7 – Final Chapter (35-40)
+            (
+                "Even at 36, the shot-making instincts remained impeccable. {name}'s pull-up in the fourth "
+                "quarter still had arenas holding their breath. One chapter remained.",
+                ("Return to where the journey began for a sentimental final season",
+                 {"points": 800, "rebounds": 200, "assists": 200, "all_stars": 0, "championships": 0}),
+                ("Join a contender and leave the game with a championship ring on the finger",
+                 {"points": 600, "rebounds": 150, "assists": 150, "all_stars": 0, "championships": 1}),
+            ),
+        ]
+    elif position_group == "Small Forward":
+        return [
+            # 0 – High School Phenom (16-18)
+            (
+                "{name} was the most complete prospect anyone had seen in years \u2014 a {style} with the versatility "
+                "to play three positions and dominate each of them. The big programs formed an orderly queue.",
+                ("Commit to a top program and compete for a national championship",
+                 {"points": 700, "rebounds": 350, "assists": 300, "all_stars": 0, "championships": 0}),
+                ("Choose the school that offers the most freedom to develop an all-round game",
+                 {"points": 850, "rebounds": 400, "assists": 350, "all_stars": 0, "championships": 0}),
+            ),
+            # 1 – College / Pre-Draft (18-21)
+            (
+                "The college game was simply too small to contain {name}. A {style} who posted absurd efficiency "
+                "across every statistical category, the consensus top-5 Draft projection arrived by sophomore December.",
+                ("Stay for three years, become the program's greatest-ever player, and leave on your own terms",
+                 {"points": 1400, "rebounds": 700, "assists": 600, "all_stars": 0, "championships": 0}),
+                ("Declare after one season \u2014 the athleticism and skill are already elite-level",
+                 {"points": 900, "rebounds": 450, "assists": 400, "all_stars": 0, "championships": 0}),
+            ),
+            # 2 – NBA Draft & Rookie Year (21-22)
+            (
+                "Top-five pick. The projection met the reality when {name} walked into training camp and looked "
+                "right at home against veterans. The Swiss Army knife skill set worked at every level.",
+                ("Embrace a primary role immediately and chase the Rookie of the Year award",
+                 {"points": 1500, "rebounds": 600, "assists": 400, "all_stars": 0, "championships": 0}),
+                ("Accept a secondary role, let the veterans lead, and absorb everything possible",
+                 {"points": 1000, "rebounds": 450, "assists": 300, "all_stars": 0, "championships": 0}),
+            ),
+            # 3 – Rising Star (22-24)
+            (
+                "The NBA world was starting to realise what scouts already knew. {name}'s combination of "
+                "passing, scoring, and lockdown defence had coaches calling it once-in-a-generation.",
+                ("Sign a max extension and be the cornerstone of a genuine playoff contender",
+                 {"points": 2200, "rebounds": 850, "assists": 700, "all_stars": 1, "championships": 0}),
+                ("Force a move to a team with championship infrastructure and prove the ceiling immediately",
+                 {"points": 1900, "rebounds": 750, "assists": 600, "all_stars": 0, "championships": 0}),
+            ),
+            # 4 – Breakout Season (24-26)
+            (
+                "The breakout was complete and undeniable. {name} was a Defensive Player of the Year candidate "
+                "and a 25-point scorer \u2014 the rarest of combinations in the modern NBA.",
+                ("Lead the franchise to the Conference Finals",
+                 {"points": 2800, "rebounds": 1000, "assists": 800, "all_stars": 1, "championships": 0}),
+                ("Win the Defensive Player of the Year award and set the standard for wing defence",
+                 {"points": 2400, "rebounds": 1100, "assists": 750, "all_stars": 1, "championships": 0}),
+            ),
+            # 5 – Peak Years (26-30)
+            (
+                "Perennial All-NBA and the most complete player in the league, {name} had transcended position. "
+                "Teams built defensive game plans around a single player for the first time.",
+                ("Win the NBA Finals and deliver a championship to the city",
+                 {"points": 3200, "rebounds": 1200, "assists": 1000, "all_stars": 1, "championships": 1}),
+                ("Pursue the MVP award and cement yourself as the best player on the planet",
+                 {"points": 3800, "rebounds": 1100, "assists": 900, "all_stars": 1, "championships": 0}),
+            ),
+            # 6 – Veteran Phase (30-35)
+            (
+                "Age had only added layers of craft. {name}'s post-up game, three-point shooting, "
+                "and defensive versatility remained elite tools even as explosiveness naturally declined.",
+                ("Join a contender as an experienced leader and mentor the next crop of forwards",
+                 {"points": 2000, "rebounds": 800, "assists": 600, "all_stars": 0, "championships": 1}),
+                ("Stay as a franchise icon and prove longevity with continued All-Star production",
+                 {"points": 2500, "rebounds": 900, "assists": 700, "all_stars": 1, "championships": 0}),
+            ),
+            # 7 – Final Chapter (35-40)
+            (
+                "Few wings had played with the intelligence and efficiency that {name} displayed at 36. "
+                "Younger players crowded around every film session, desperate to absorb the knowledge.",
+                ("Return to the team that drafted you for an emotional final season",
+                 {"points": 800, "rebounds": 350, "assists": 250, "all_stars": 0, "championships": 0}),
+                ("Sign with a championship contender and ride off into the sunset with a ring",
+                 {"points": 600, "rebounds": 250, "assists": 200, "all_stars": 0, "championships": 1}),
+            ),
+        ]
+    elif position_group == "Power Forward":
+        return [
+            # 0 – High School Phenom (16-18)
+            (
+                "At every grassroots tournament {name} stood above the rest \u2014 a physical {style} who bullied "
+                "older opponents with a combination of strength and footwork that scouts called unprecedented.",
+                ("Commit to a powerhouse program and establish frontcourt dominance immediately",
+                 {"points": 700, "rebounds": 600, "assists": 200, "all_stars": 0, "championships": 0}),
+                ("Choose a program where you'll be featured and can develop your perimeter game",
+                 {"points": 900, "rebounds": 700, "assists": 250, "all_stars": 0, "championships": 0}),
+            ),
+            # 1 – College / Pre-Draft (18-21)
+            (
+                "Conference forwards had no answer for {name}. A {style} who combined a reliable mid-range "
+                "jumper with bruising post play, the double-doubles were automatic from opening night.",
+                ("Stay all four years and break every frontcourt record in program history",
+                 {"points": 1400, "rebounds": 1200, "assists": 400, "all_stars": 0, "championships": 0}),
+                ("Declare after two dominant seasons while your stock is at its absolute peak",
+                 {"points": 1000, "rebounds": 900, "assists": 300, "all_stars": 0, "championships": 0}),
+            ),
+            # 2 – NBA Draft & Rookie Year (21-22)
+            (
+                "The lottery called {name}'s name and the franchise had found its anchor. "
+                "The physicality was undeniable from the first preseason game \u2014 the NBA had a new problem.",
+                ("Start straight away and dominate the interior from the opening night",
+                 {"points": 1400, "rebounds": 900, "assists": 250, "all_stars": 0, "championships": 0}),
+                ("Come off the bench, study the veterans, and be a dominant rotation piece in year one",
+                 {"points": 900, "rebounds": 650, "assists": 150, "all_stars": 0, "championships": 0}),
+            ),
+            # 3 – Rising Star (22-24)
+            (
+                "The combination of interior scoring and elite rebounding was making {name} a defensive nightmare. "
+                "The three-ball was developing too \u2014 suddenly a 20-10-plus player with range.",
+                ("Extend with the franchise as the starting power forward in a playoff run",
+                 {"points": 2200, "rebounds": 1400, "assists": 450, "all_stars": 1, "championships": 0}),
+                ("Push for a trade to a winning culture where the talent around you matches the ambition",
+                 {"points": 1900, "rebounds": 1200, "assists": 400, "all_stars": 0, "championships": 0}),
+            ),
+            # 4 – Breakout Season (24-26)
+            (
+                "A monster 22-12 season and a first All-Star start sent {name}'s stock into the stratosphere. "
+                "The stretch-four skill set had become the most coveted in the league.",
+                ("Lead the franchise on a deep playoff run and prove the big-game gene",
+                 {"points": 2800, "rebounds": 1600, "assists": 600, "all_stars": 1, "championships": 0}),
+                ("Win the Most Improved Award and prove to the league you're among the elite forwards",
+                 {"points": 3000, "rebounds": 1700, "assists": 550, "all_stars": 1, "championships": 0}),
+            ),
+            # 5 – Peak Years (26-30)
+            (
+                "All-NBA on the ballot every season and the most dominant power forward alive, {name} "
+                "was redefining what the position could look like in the modern era.",
+                ("Win the championship and add a ring to go with the hardware",
+                 {"points": 3400, "rebounds": 2000, "assists": 700, "all_stars": 1, "championships": 1}),
+                ("Win back-to-back All-NBA First Teams and build a Hall of Fame statistical foundation",
+                 {"points": 3800, "rebounds": 2200, "assists": 650, "all_stars": 1, "championships": 0}),
+            ),
+            # 6 – Veteran Phase (30-35)
+            (
+                "Wisdom replaced some of the raw power, but {name}'s high-post passing and shooting touch "
+                "had evolved into a completely different \u2014 and equally lethal \u2014 threat.",
+                ("Accept a veteran leader role alongside a young star and chase a farewell ring",
+                 {"points": 2000, "rebounds": 1300, "assists": 450, "all_stars": 0, "championships": 1}),
+                ("Remain as a franchise cornerstone and mentor the emerging generation of power forwards",
+                 {"points": 2400, "rebounds": 1500, "assists": 500, "all_stars": 1, "championships": 0}),
+            ),
+            # 7 – Final Chapter (35-40)
+            (
+                "Defying every statistic about aging bigs, {name} was still posting double-doubles "
+                "at 36 and providing a steadying presence in every locker room.",
+                ("Return to the team where the legacy was built for one final emotional season",
+                 {"points": 700, "rebounds": 550, "assists": 150, "all_stars": 0, "championships": 0}),
+                ("Sign with a contender and add a ring to the trophy case on the way out",
+                 {"points": 600, "rebounds": 450, "assists": 100, "all_stars": 0, "championships": 1}),
+            ),
+        ]
+    else:  # Center
+        return [
+            # 0 – High School Phenom (16-18)
+            (
+                "There had not been a prospect quite like {name} in years \u2014 a towering {style} with footwork "
+                "that seemed impossible for the frame and a wingspan that blocked out the gymnasium lights.",
+                ("Commit to the blue-blood program with the best tradition of developing big men",
+                 {"points": 600, "rebounds": 700, "assists": 150, "all_stars": 0, "championships": 0}),
+                ("Choose the program that promises full offensive usage and an immediate featured role",
+                 {"points": 800, "rebounds": 850, "assists": 200, "all_stars": 0, "championships": 0}),
+            ),
+            # 1 – College / Pre-Draft (18-21)
+            (
+                "There was simply no answer for {name} within forty feet of the basket. A {style} who averaged "
+                "a double-double with four blocks per game, the consensus top-3 Draft projection arrived in October.",
+                ("Stay for three years and develop an unstoppable post arsenal",
+                 {"points": 1300, "rebounds": 1400, "assists": 300, "all_stars": 0, "championships": 0}),
+                ("Declare for the Draft after one dominant season and go top three",
+                 {"points": 900, "rebounds": 1000, "assists": 200, "all_stars": 0, "championships": 0}),
+            ),
+            # 2 – NBA Draft & Rookie Year (21-22)
+            (
+                "A top-three pick and franchise centrepiece from the opening tip, {name} intimidated the entire "
+                "league from the very first blocked shot. Rim protection at this level changed everything.",
+                ("Embrace a featured scoring role and Rookie of the Year consideration immediately",
+                 {"points": 1400, "rebounds": 1000, "assists": 250, "all_stars": 0, "championships": 0}),
+                ("Focus on defence and rebounding first \u2014 become the anchor and the rest will follow",
+                 {"points": 900, "rebounds": 1200, "assists": 150, "all_stars": 0, "championships": 0}),
+            ),
+            # 3 – Rising Star (22-24)
+            (
+                "The league's most dominant big man was taking shape. {name}'s post-up efficiency was elite "
+                "and the shot-blocking numbers had opposing coaches rerouting their entire offences.",
+                ("Sign a max extension and become the franchise cornerstone for the next decade",
+                 {"points": 2200, "rebounds": 1600, "assists": 350, "all_stars": 1, "championships": 0}),
+                ("Force a move to a legitimate contender and prove you can anchor a championship team",
+                 {"points": 1900, "rebounds": 1400, "assists": 300, "all_stars": 0, "championships": 0}),
+            ),
+            # 4 – Breakout Season (24-26)
+            (
+                "Defensive Player of the Year. The award confirmed what every forward in the league already dreaded. "
+                "{name} had turned the painted area into a no-fly zone with zero exceptions.",
+                ("Lead the franchise to the Conference Finals and prove the complete package",
+                 {"points": 2800, "rebounds": 1900, "assists": 500, "all_stars": 1, "championships": 0}),
+                ("Win the Defensive Player of the Year award and establish the standard for rim protection",
+                 {"points": 2400, "rebounds": 2100, "assists": 400, "all_stars": 1, "championships": 0}),
+            ),
+            # 5 – Peak Years (26-30)
+            (
+                "The most dominant centre on the planet. {name}'s combination of scoring, rebounding, and "
+                "rim protection had turned the position back into the most feared in the sport.",
+                ("Win the NBA championship and deliver the ultimate prize to the city",
+                 {"points": 3200, "rebounds": 2300, "assists": 600, "all_stars": 1, "championships": 1}),
+                ("Win back-to-back All-NBA First Teams and chase the all-time scoring and rebounding records",
+                 {"points": 3800, "rebounds": 2600, "assists": 550, "all_stars": 1, "championships": 0}),
+            ),
+            # 6 – Veteran Phase (30-35)
+            (
+                "Mobility had faded but the craftwork in the post never did. {name}'s drop step and "
+                "hook shot remained the most unguardable actions in the half-court game.",
+                ("Accept a mentor role alongside a young star and bring championship experience to the locker room",
+                 {"points": 1800, "rebounds": 1500, "assists": 300, "all_stars": 0, "championships": 1}),
+                ("Remain as the starting centre and chase a final All-Star appearance to cap the career",
+                 {"points": 2200, "rebounds": 1700, "assists": 350, "all_stars": 1, "championships": 0}),
+            ),
+            # 7 – Final Chapter (35-40)
+            (
+                "They said the body would slow the mind, but {name}'s feel for the game at 37 remained extraordinary. "
+                "Paint touches still produced buckets; blocks still saved games.",
+                ("Return to the franchise that drafted you and write a legendary final chapter",
+                 {"points": 600, "rebounds": 600, "assists": 100, "all_stars": 0, "championships": 0}),
+                ("Sign with a championship contender and add a ring before the final curtain",
+                 {"points": 500, "rebounds": 500, "assists": 80, "all_stars": 0, "championships": 1}),
+            ),
+        ]
+
+
+def _nba_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> dict:
+    """Return {narrative, choices: [str, str], stat_deltas: [dict, dict]}."""
+    templates = _nba_stage_data(player["position_group"])
+    tmpl_narr, tmpl_a, tmpl_b = templates[stage["idx"]]
+    fallback = {
+        "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
+        "choices":     [tmpl_a[0], tmpl_b[0]],
+        "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+    }
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stat_line = (
+            f"Career stats so far: {stats['points']} points, {stats['rebounds']} rebounds, "
+            f"{stats['assists']} assists, {stats['all_stars']} All-Star selections, "
+            f"{stats['championships']} championships."
+        ) if any(stats.values()) else ""
+        prompt = (
+            f"Create a career stage for this NBA player:\\n"
+            f"Name: {player['name']} | Position: {player['position_group']} | Style: {player['style']}\\n"
+            f"Stage: {stage['name']} (Age {stage['age']})\\n"
+            f"{stat_line}\\n\\n"
+            f"Respond in EXACTLY this format (keep each section to 1-2 sentences):\\n"
+            f"NARRATIVE: [dramatic NBA career narrative for this stage]\\n"
+            f"CHOICE_A: [{tmpl_a[0]}]\\n"
+            f"CHOICE_B: [{tmpl_b[0]}]"
+        )
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NBA career narrator creating an engaging text-adventure game. "
+                    "Be concise, dramatic, and use authentic NBA details. "
+                    "Keep the two choices close to the template options provided."
+                )},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=220,
+            temperature=0.85,
+        )
+        lines = {}
+        for line in resp.choices[0].message.content.strip().splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                lines[k.strip()] = v.strip()
+        return {
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
+            "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+        }
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nba_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
+    """Return outcome narrative string for an NBA career stage choice."""
+    parts = []
+    if delta.get("points"):        parts.append(f"{delta['points']} points")
+    if delta.get("rebounds"):      parts.append(f"{delta['rebounds']} rebounds")
+    if delta.get("assists"):       parts.append(f"{delta['assists']} assists")
+    if delta.get("all_stars"):     parts.append(f"{delta['all_stars']} All-Star selection(s)")
+    if delta.get("championships"): parts.append(f"{delta['championships']} championship(s)")
+    stat_str = ", ".join(parts) if parts else "valuable experience"
+    fallback = (
+        f"A tremendous stretch for {player['name']}! "
+        f"The decision paid off with {stat_str} earned across this stage of the career."
+    )
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NBA career narrator. Write punchy, vivid outcome paragraphs."
+                )},
+                {"role": "user", "content": (
+                    f"{player['name']} (NBA {player['position_group']}) chose: \"{choice_text}\"\\n"
+                    f"Stage: {stage['name']}\\n"
+                    f"Results: {stat_str}\\n\\n"
+                    f"Write ONE paragraph (2-3 sentences) describing what happened. "
+                    f"Be specific and dramatic. Do NOT start with the player's name."
+                )},
+            ],
+            max_tokens=130,
+            temperature=0.85,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nba_career_rating(stats: dict) -> tuple[int, str]:
+    """Return (0-100 rating, badge label) based on accumulated NBA career stats."""
+    score = (
+        stats["points"] * 0.05
+        + stats["rebounds"] * 0.1
+        + stats["assists"] * 0.1
+        + stats["all_stars"] * 100
+        + stats["championships"] * 250
+    )
+    if score >= 3000: return 99, "\U0001f410 NBA Immortal"
+    if score >= 2200: return 95, "\u2b50 Hall of Fame Lock"
+    if score >= 1500: return 90, "\U0001f31f Elite All-Star"
+    if score >= 1000: return 83, "\U0001f4c8 Multiple All-Star"
+    if score >= 600:  return 75, "\u2705 Solid NBA Starter"
+    return 65, "\U0001f393 NBA Role Player"
+
+
+# \u2500\u2500 NBA Player Sim: tab rendering \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+with tab_nba_player:
+    st.markdown("## \U0001f3c0 NBA Player Career Simulator")
+    st.markdown(
+        "Create your own NBA player and guide them from grassroots courts to championship glory. "
+        "Every decision shapes your legacy \u2014 points, rebounds, assists, All-Star selections, and championship rings."
+    )
+    if not st.session_state.openai_api_key:
+        st.info(
+            "\U0001f4a1 **Tip:** Enter your OpenAI API key in the sidebar to unlock AI-generated "
+            "personalised narratives. The simulator works great with built-in story templates too!"
+        )
+
+    nba_stage_idx = st.session_state.nba_stage_idx
+    nba_player    = st.session_state.nba_player
+
+    if nba_stage_idx == -1:
+        st.markdown("### \U0001f3c0 Create Your NBA Player")
+        col_nb1, col_nb2 = st.columns(2)
+        with col_nb1:
+            nba_name  = st.text_input("Player Name", placeholder="e.g. Jaylen Cross", key="nba_name_input")
+            nba_pos   = st.selectbox("Position Group", _NBA_POSITION_GROUPS, key="nba_pos_input")
+        with col_nb2:
+            nba_style = st.selectbox("Playing Style", _NBA_PLAYING_STYLES, key="nba_style_input")
+
+        if st.button("\U0001f680 Start NBA Career", key="nba_start"):
+            if not nba_name.strip():
+                st.warning("Please enter a player name.")
+            else:
+                st.session_state.nba_player = {
+                    "name":           nba_name.strip(),
+                    "position_group": nba_pos,
+                    "style":          nba_style,
+                }
+                st.session_state.nba_stage_idx        = 0
+                st.session_state.nba_awaiting_outcome = False
+                st.session_state.nba_chosen_option    = None
+                st.session_state.nba_narrative        = ""
+                st.session_state.nba_choices          = []
+                st.session_state.nba_outcome_text     = ""
+                st.session_state.nba_stats            = {"points": 0, "rebounds": 0, "assists": 0, "all_stars": 0, "championships": 0}
+                st.session_state.nba_history          = []
+                st.rerun()
+
+    elif nba_stage_idx < len(_NBA_CAREER_STAGES):
+        stage   = _NBA_CAREER_STAGES[nba_stage_idx]
+        player  = st.session_state.nba_player
+        stats   = st.session_state.nba_stats
+        api_key = st.session_state.openai_api_key
+
+        st.markdown(f"### {stage['icon']} Stage {nba_stage_idx + 1} / {len(_NBA_CAREER_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress(nba_stage_idx / len(_NBA_CAREER_STAGES))
+
+        nbs1, nbs2, nbs3, nbs4, nbs5 = st.columns(5)
+        with nbs1: st.metric("\U0001f3c0 Points",        stats["points"])
+        with nbs2: st.metric("\U0001f4aa Rebounds",      stats["rebounds"])
+        with nbs3: st.metric("\U0001f3af Assists",        stats["assists"])
+        with nbs4: st.metric("\u2b50 All-Stars",          stats["all_stars"])
+        with nbs5: st.metric("\U0001f3c6 Championships",  stats["championships"])
+
+        st.markdown("---")
+
+        if not st.session_state.nba_narrative:
+            with st.spinner("\u270d\ufe0f Writing your NBA story\u2026"):
+                data = _nba_generate_stage(player, stage, stats, api_key)
+            st.session_state.nba_narrative = data["narrative"]
+            st.session_state.nba_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.rerun()
+
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #c9a227;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.nba_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+
+        if st.session_state.nba_awaiting_outcome:
+            chosen_idx = st.session_state.nba_chosen_option
+            choice_text, delta = st.session_state.nba_choices[chosen_idx]
+
+            if not st.session_state.nba_outcome_text:
+                with st.spinner("\u26a1 Simulating the outcome\u2026"):
+                    outcome = _nba_generate_outcome(player, stage, choice_text, delta, api_key)
+                st.session_state.nba_outcome_text = outcome
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(201,162,39,0.1);border-left:4px solid #ffc107;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.nba_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            gain_parts = []
+            if delta.get("points"):        gain_parts.append(f"\U0001f3c0 +{delta['points']} pts")
+            if delta.get("rebounds"):      gain_parts.append(f"\U0001f4aa +{delta['rebounds']} reb")
+            if delta.get("assists"):       gain_parts.append(f"\U0001f3af +{delta['assists']} ast")
+            if delta.get("all_stars"):     gain_parts.append(f"\u2b50 +{delta['all_stars']} All-Star")
+            if delta.get("championships"): gain_parts.append(f"\U0001f3c6 +{delta['championships']} ring")
+            if gain_parts:
+                st.markdown("**Stats earned:** " + "  \u00b7  ".join(gain_parts))
+
+            next_label = "\u25b6\ufe0f Next Stage" if nba_stage_idx < len(_NBA_CAREER_STAGES) - 1 else "\U0001f3c1 Retire & See Legacy"
+            if st.button(next_label, key="nba_next_stage"):
+                for k, v in delta.items():
+                    st.session_state.nba_stats[k] += v
+                st.session_state.nba_history.append({
+                    "stage":   stage["name"],
+                    "choice":  choice_text,
+                    "outcome": st.session_state.nba_outcome_text,
+                    "delta":   delta,
+                })
+                st.session_state.nba_stage_idx        += 1
+                st.session_state.nba_awaiting_outcome  = False
+                st.session_state.nba_chosen_option     = None
+                st.session_state.nba_narrative         = ""
+                st.session_state.nba_choices           = []
+                st.session_state.nba_outcome_text      = ""
+                st.rerun()
+
+        else:
+            st.markdown("### \U0001f914 What do you do?")
+            choices = st.session_state.nba_choices
+            col_nba_a, col_nba_b = st.columns(2)
+            with col_nba_a:
+                if st.button(f"**A:** {choices[0][0]}", key="nba_choice_a", use_container_width=True):
+                    st.session_state.nba_chosen_option    = 0
+                    st.session_state.nba_awaiting_outcome = True
+                    st.rerun()
+            with col_nba_b:
+                if st.button(f"**B:** {choices[1][0]}", key="nba_choice_b", use_container_width=True):
+                    st.session_state.nba_chosen_option    = 1
+                    st.session_state.nba_awaiting_outcome = True
+                    st.rerun()
+
+    elif nba_stage_idx >= len(_NBA_CAREER_STAGES):
+        player = st.session_state.nba_player
+        stats  = st.session_state.nba_stats
+        rating, badge = _nba_career_rating(stats)
+
+        st.markdown(f"## \U0001f3c1 {player['name']} \u2014 NBA Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem;background:linear-gradient(90deg,#1a1a2e,#c9a227);">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{player['position_group']} \u00b7 {player['style']}**")
+
+        nb1, nb2, nb3, nb4, nb5 = st.columns(5)
+        with nb1: st.metric("\U0001f3c0 Career Points",        stats["points"])
+        with nb2: st.metric("\U0001f4aa Career Rebounds",      stats["rebounds"])
+        with nb3: st.metric("\U0001f3af Career Assists",        stats["assists"])
+        with nb4: st.metric("\u2b50 All-Star Selections",       stats["all_stars"])
+        with nb5: st.metric("\U0001f3c6 Championships",         stats["championships"])
+
+        st.markdown("---")
+        st.markdown("### \U0001f4d6 NBA Career Chronicle")
+        for entry in st.session_state.nba_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #c9a227;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#f0c040">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Chose: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        btn_nb1, btn_nb2 = st.columns(2)
+        with btn_nb1:
+            if st.button("\U0001f504 Start a New NBA Career", key="nba_restart"):
+                st.session_state.nba_player           = None
+                st.session_state.nba_stage_idx        = -1
+                st.session_state.nba_awaiting_outcome = False
+                st.session_state.nba_chosen_option    = None
+                st.session_state.nba_narrative        = ""
+                st.session_state.nba_choices          = []
+                st.session_state.nba_outcome_text     = ""
+                st.session_state.nba_stats            = {"points": 0, "rebounds": 0, "assists": 0, "all_stars": 0, "championships": 0}
+                st.session_state.nba_history          = []
+                st.rerun()
+        with btn_nb2:
+            if st.button("\U0001f9d1\u200d\U0001f4bc Continue as NBA Head Coach", key="nba_to_coach"):
+                st.session_state.nba_coach_prefill          = {"name": player["name"]}
+                st.session_state.nba_coach_manager          = None
+                st.session_state.nba_coach_stage_idx        = -1
+                st.session_state.nba_coach_awaiting_outcome = False
+                st.session_state.nba_coach_chosen_option    = None
+                st.session_state.nba_coach_narrative        = ""
+                st.session_state.nba_coach_choices          = []
+                st.session_state.nba_coach_outcome_text     = ""
+                st.session_state.nba_coach_stats            = {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0}
+                st.session_state.nba_coach_history          = []
+                st.rerun()
+
+        if st.session_state.nba_coach_prefill:
+            st.info("\U0001f9d1\u200d\U0001f4bc Your coaching career is ready! Head to the **NBA Head Coach** tab to begin your journey.")
+
+
+# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+# NBA COACH SIM \u2014 constants, helpers, tab rendering
+# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+_NBA_COACH_PHILOSOPHIES = [
+    "Pick-and-Roll System",
+    "Defensive-First",
+    "Pace-and-Space",
+    "Triangle Offense",
+    "Motion Offense",
+    "Iso-Heavy Playbook",
+    "Small Ball Revolution",
+    "Two-Way Balance",
+]
+
+_NBA_COACH_STAGES = [
+    {"idx": 0, "id": "video_coord",  "name": "Video Coordinator / Assistant", "age": "28\u201333", "icon": "\U0001f331"},
+    {"idx": 1, "id": "lead_asst",    "name": "Lead Assistant Coach",          "age": "33\u201338", "icon": "\U0001f4cb"},
+    {"idx": 2, "id": "first_hc",     "name": "First Head Coach Role",         "age": "38\u201342", "icon": "\u26a1"},
+    {"idx": 3, "id": "rebuilding",   "name": "Rebuilding a Franchise",        "age": "42\u201346", "icon": "\U0001f4c8"},
+    {"idx": 4, "id": "playoff_run",  "name": "Playoff Contender",             "age": "46\u201350", "icon": "\U0001f4a5"},
+    {"idx": 5, "id": "finals_run",   "name": "Finals Run",                    "age": "50\u201354", "icon": "\U0001f3c6"},
+    {"idx": 6, "id": "dynasty",      "name": "Dynasty Builder",               "age": "54\u201358", "icon": "\U0001f451"},
+    {"idx": 7, "id": "legacy",       "name": "Legacy Chapter",                "age": "58+",        "icon": "\U0001f3c1"},
+]
+
+
+def _nba_coach_stage_data(philosophy: str) -> list:
+    """Return list of (narrative, choice_a, choice_b) tuples for 8 NBA coaching stages."""
+    return [
+        # 0 – Video Coordinator / Assistant (28-33)
+        (
+            "After retiring, {name} joined an NBA staff as a video coordinator and quickly became the coach "
+            "every player sought out for extra film sessions. The {philosophy} system was being sketched out on whiteboards.",
+            ("Coach the perimeter players and build a reputation developing young guards and wings",
+             {"wins": 0, "championships": 0, "players_developed": 8, "reputation": 8}),
+            ("Focus on defensive scheme design and earn a full-time assistant role ahead of schedule",
+             {"wins": 0, "championships": 0, "players_developed": 3, "reputation": 12}),
+        ),
+        # 1 – Lead Assistant Coach (33-38)
+        (
+            "The head coach saw the brilliance in the film room and on the practice floor. "
+            "{name} was elevated to lead assistant \u2014 the final stepping stone before the top job.",
+            ("Accept a lead assistant role at a championship-contending franchise",
+             {"wins": 35, "championships": 0, "players_developed": 6, "reputation": 20}),
+            ("Take a lead assistant role at an ambitious mid-market team with full offensive authority",
+             {"wins": 28, "championships": 0, "players_developed": 9, "reputation": 22}),
+        ),
+        # 2 – First Head Coach Role (38-42)
+        (
+            "The call came on a January afternoon. {name} was a head coach in the National Basketball Association. "
+            "The {philosophy} system was installed from day one of training camp.",
+            ("Implement the system boldly and demand immediate buy-in from the veterans in the locker room",
+             {"wins": 120, "championships": 0, "players_developed": 5, "reputation": 24}),
+            ("Build trust through the locker room first, then gradually impose the full philosophy",
+             {"wins": 100, "championships": 0, "players_developed": 10, "reputation": 28}),
+        ),
+        # 3 – Rebuilding a Franchise (42-46)
+        (
+            "A struggling lottery team came calling with a mandate to rebuild from scratch. "
+            "{name} accepted the challenge \u2014 turning a losing culture into a winning one is the ultimate test.",
+            ("Go all-in on the Draft and develop homegrown stars through a multi-year plan",
+             {"wins": 130, "championships": 0, "players_developed": 14, "reputation": 30}),
+            ("Leverage free agency to fast-track the rebuild and reach the playoffs ahead of schedule",
+             {"wins": 165, "championships": 0, "players_developed": 5, "reputation": 34}),
+        ),
+        # 4 – Playoff Contender (46-50)
+        (
+            "The rebuild had delivered. {name}'s roster was playoff-calibre and the fanbase was buzzing "
+            "with Finals energy for the first time in a generation.",
+            ("Make a deep playoff run \u2014 reach the Conference Finals and send a message to the league",
+             {"wins": 180, "championships": 0, "players_developed": 8, "reputation": 38}),
+            ("Swing a bold trade at the deadline and target a Conference championship this season",
+             {"wins": 160, "championships": 0, "players_developed": 5, "reputation": 44}),
+        ),
+        # 5 – Finals Run (50-54)
+        (
+            "An NBA Finals berth was within reach. {name}'s {philosophy} system was operating at peak "
+            "efficiency and the squad had every piece to go all the way.",
+            ("Win the NBA championship and deliver the ultimate prize to the franchise",
+             {"wins": 200, "championships": 1, "players_developed": 6, "reputation": 52}),
+            ("Build the infrastructure for sustained excellence \u2014 roster depth over a one-year title run",
+             {"wins": 175, "championships": 0, "players_developed": 10, "reputation": 48}),
+        ),
+        # 6 – Dynasty Builder (54-58)
+        (
+            "Back-to-back Finals windows had opened as {name} had assembled what analysts were already "
+            "calling a dynasty-level roster. Only the truly great coaches had achieved what was now in sight.",
+            ("Win consecutive championships and become the defining coach of your era",
+             {"wins": 220, "championships": 2, "players_developed": 8, "reputation": 60}),
+            ("Prioritise developing the next generation of stars alongside sustained championship contention",
+             {"wins": 190, "championships": 1, "players_developed": 18, "reputation": 55}),
+        ),
+        # 7 – Legacy Chapter (58+)
+        (
+            "At 58, {name}'s legacy was already written in NBA history. "
+            "But one final chapter remained \u2014 a chance to be remembered as the greatest coach of all time.",
+            ("Return to a beloved former team for an emotional reunion and one last championship push",
+             {"wins": 120, "championships": 1, "players_developed": 10, "reputation": 45}),
+            ("Take over a first-time Finals contender and deliver the ultimate storybook ending",
+             {"wins": 150, "championships": 2, "players_developed": 12, "reputation": 55}),
+        ),
+    ]
+
+
+def _nba_coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: str) -> dict:
+    """Return {narrative, choices: [str, str], stat_deltas: [dict, dict]}."""
+    templates = _nba_coach_stage_data(manager["philosophy"])
+    tmpl_narr, tmpl_a, tmpl_b = templates[stage["idx"]]
+    fallback = {
+        "narrative":   tmpl_narr.format(name=manager["name"], philosophy=manager["philosophy"]),
+        "choices":     [tmpl_a[0], tmpl_b[0]],
+        "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+    }
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stat_line = (
+            f"Career stats so far: {stats['wins']} wins, {stats['championships']} championships, "
+            f"{stats['players_developed']} players developed, {stats['reputation']} reputation points."
+        ) if any(stats.values()) else ""
+        prompt = (
+            f"Create an NBA coaching career stage for this head coach:\\n"
+            f"Name: {manager['name']} | Philosophy: {manager['philosophy']}\\n"
+            f"Stage: {stage['name']} (Age {stage['age']})\\n"
+            f"{stat_line}\\n\\n"
+            f"Respond in EXACTLY this format (keep each section to 1-2 sentences):\\n"
+            f"NARRATIVE: [dramatic NBA coaching career narrative for this stage]\\n"
+            f"CHOICE_A: [{tmpl_a[0]}]\\n"
+            f"CHOICE_B: [{tmpl_b[0]}]"
+        )
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NBA coaching career narrator creating an engaging text-adventure game. "
+                    "Be concise, dramatic, and use authentic NBA coaching details. "
+                    "Keep the two choices close to the template options provided."
+                )},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=220,
+            temperature=0.85,
+        )
+        lines = {}
+        for line in resp.choices[0].message.content.strip().splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                lines[k.strip()] = v.strip()
+        return {
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
+            "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+        }
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nba_coach_generate_outcome(manager: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
+    """Return outcome narrative string for an NBA coaching stage choice."""
+    parts = []
+    if delta.get("wins"):              parts.append(f"{delta['wins']} wins")
+    if delta.get("championships"):     parts.append(f"{delta['championships']} championship(s)")
+    if delta.get("players_developed"): parts.append(f"{delta['players_developed']} players developed")
+    if delta.get("reputation"):        parts.append(f"{delta['reputation']} reputation points")
+    stat_str = ", ".join(parts) if parts else "invaluable experience"
+    fallback = (
+        f"A superb spell of coaching for {manager['name']}! "
+        f"The decision paid off with {stat_str} earned across this stage of the career."
+    )
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NBA coaching career narrator. Write punchy, vivid outcome paragraphs."
+                )},
+                {"role": "user", "content": (
+                    f"{manager['name']} (NBA head coach, {manager['philosophy']}) "
+                    f"chose: \"{choice_text}\"\\n"
+                    f"Stage: {stage['name']}\\n"
+                    f"Results: {stat_str}\\n\\n"
+                    f"Write ONE paragraph (2-3 sentences) describing what happened. "
+                    f"Be specific and dramatic. Do NOT start with the coach's name."
+                )},
+            ],
+            max_tokens=130,
+            temperature=0.85,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nba_coach_career_rating(stats: dict) -> tuple[int, str]:
+    """Return (0-100 rating, badge label) based on accumulated NBA coaching stats."""
+    score = (
+        stats["wins"] * 0.5
+        + stats["championships"] * 120
+        + stats["players_developed"] * 3
+        + stats["reputation"] * 1.5
+    )
+    if score >= 1200: return 99, "\U0001f410 Greatest NBA Coach of All Time"
+    if score >= 900:  return 95, "\u2b50 Hall of Fame Coach"
+    if score >= 650:  return 90, "\U0001f31f Dynasty Architect"
+    if score >= 450:  return 83, "\U0001f4c8 Accomplished Head Coach"
+    if score >= 280:  return 74, "\u2705 Respected NBA Coach"
+    return 62, "\U0001f393 Journeyman Head Coach"
+
+
+# \u2500\u2500 NBA Coach Sim: tab rendering \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+with tab_nba_coach:
+    st.markdown("## \U0001f3c0 NBA Head Coach Career Simulator")
+    st.markdown(
+        "Build your NBA coaching career from a video coordinator all the way to championship glory. "
+        "Every decision shapes your legacy \u2014 wins, championships, players developed, and reputation."
+    )
+    if not st.session_state.openai_api_key:
+        st.info(
+            "\U0001f4a1 **Tip:** Enter your OpenAI API key in the sidebar to unlock AI-generated "
+            "personalised narratives. The simulator works great with built-in story templates too!"
+        )
+
+    nba_coach_stage_idx = st.session_state.nba_coach_stage_idx
+    nba_coach_manager   = st.session_state.nba_coach_manager
+    nba_coach_prefill   = st.session_state.nba_coach_prefill
+
+    if nba_coach_stage_idx == -1:
+        if nba_coach_prefill:
+            st.success(
+                f"\U0001f389 Welcome to the NBA sideline, **{nba_coach_prefill['name']}**! "
+                f"Your playing days are over \u2014 now it's time to shape the game from the bench. "
+                f"Choose your philosophy to begin."
+            )
+
+        st.markdown("### \U0001f4cb Create Your NBA Head Coach")
+        col_nbc1, col_nbc2 = st.columns(2)
+        with col_nbc1:
+            _default_nba_coach_name = nba_coach_prefill["name"] if nba_coach_prefill else ""
+            nba_coach_name = st.text_input(
+                "Coach Name", value=_default_nba_coach_name,
+                placeholder="e.g. Sam Torres", key="nba_coach_name_input"
+            )
+        with col_nbc2:
+            nba_coach_philosophy = st.selectbox(
+                "Coaching Philosophy", _NBA_COACH_PHILOSOPHIES, key="nba_coach_phil_input"
+            )
+
+        if st.button("\U0001f680 Start NBA Coaching Career", key="nba_coach_start"):
+            if not nba_coach_name.strip():
+                st.warning("Please enter a coach name.")
+            else:
+                st.session_state.nba_coach_manager = {
+                    "name":       nba_coach_name.strip(),
+                    "philosophy": nba_coach_philosophy,
+                }
+                st.session_state.nba_coach_prefill          = None
+                st.session_state.nba_coach_stage_idx        = 0
+                st.session_state.nba_coach_awaiting_outcome = False
+                st.session_state.nba_coach_chosen_option    = None
+                st.session_state.nba_coach_narrative        = ""
+                st.session_state.nba_coach_choices          = []
+                st.session_state.nba_coach_outcome_text     = ""
+                st.session_state.nba_coach_stats            = {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0}
+                st.session_state.nba_coach_history          = []
+                st.rerun()
+
+    elif nba_coach_stage_idx < len(_NBA_COACH_STAGES):
+        stage   = _NBA_COACH_STAGES[nba_coach_stage_idx]
+        manager = st.session_state.nba_coach_manager
+        stats   = st.session_state.nba_coach_stats
+        api_key = st.session_state.openai_api_key
+
+        st.markdown(f"### {stage['icon']} Stage {nba_coach_stage_idx + 1} / {len(_NBA_COACH_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress(nba_coach_stage_idx / len(_NBA_COACH_STAGES))
+
+        nbcs1, nbcs2, nbcs3, nbcs4 = st.columns(4)
+        with nbcs1: st.metric("\U0001f3c5 Wins",              stats["wins"])
+        with nbcs2: st.metric("\U0001f3c6 Championships",      stats["championships"])
+        with nbcs3: st.metric("\U0001f331 Players Developed",  stats["players_developed"])
+        with nbcs4: st.metric("\u2b50 Reputation",             stats["reputation"])
+
+        st.markdown("---")
+
+        if not st.session_state.nba_coach_narrative:
+            with st.spinner("\u270d\ufe0f Writing your NBA coaching story\u2026"):
+                data = _nba_coach_generate_stage(manager, stage, stats, api_key)
+            st.session_state.nba_coach_narrative = data["narrative"]
+            st.session_state.nba_coach_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.rerun()
+
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #552583;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.nba_coach_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+
+        if st.session_state.nba_coach_awaiting_outcome:
+            chosen_idx = st.session_state.nba_coach_chosen_option
+            choice_text, delta = st.session_state.nba_coach_choices[chosen_idx]
+
+            if not st.session_state.nba_coach_outcome_text:
+                with st.spinner("\u26a1 Simulating the outcome\u2026"):
+                    outcome = _nba_coach_generate_outcome(manager, stage, choice_text, delta, api_key)
+                st.session_state.nba_coach_outcome_text = outcome
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(85,37,131,0.15);border-left:4px solid #ffc107;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.nba_coach_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            gain_parts = []
+            if delta.get("wins"):              gain_parts.append(f"\U0001f3c5 +{delta['wins']} wins")
+            if delta.get("championships"):     gain_parts.append(f"\U0001f3c6 +{delta['championships']} championships")
+            if delta.get("players_developed"): gain_parts.append(f"\U0001f331 +{delta['players_developed']} players")
+            if delta.get("reputation"):        gain_parts.append(f"\u2b50 +{delta['reputation']} reputation")
+            if gain_parts:
+                st.markdown("**Stats earned:** " + "  \u00b7  ".join(gain_parts))
+
+            next_label = "\u25b6\ufe0f Next Stage" if nba_coach_stage_idx < len(_NBA_COACH_STAGES) - 1 else "\U0001f3c1 Retire & See Legacy"
+            if st.button(next_label, key="nba_coach_next_stage"):
+                for k, v in delta.items():
+                    st.session_state.nba_coach_stats[k] += v
+                st.session_state.nba_coach_history.append({
+                    "stage":   stage["name"],
+                    "choice":  choice_text,
+                    "outcome": st.session_state.nba_coach_outcome_text,
+                    "delta":   delta,
+                })
+                st.session_state.nba_coach_stage_idx        += 1
+                st.session_state.nba_coach_awaiting_outcome  = False
+                st.session_state.nba_coach_chosen_option     = None
+                st.session_state.nba_coach_narrative         = ""
+                st.session_state.nba_coach_choices           = []
+                st.session_state.nba_coach_outcome_text      = ""
+                st.rerun()
+
+        else:
+            st.markdown("### \U0001f914 What do you do?")
+            choices = st.session_state.nba_coach_choices
+            col_nbca, col_nbcb = st.columns(2)
+            with col_nbca:
+                if st.button(f"**A:** {choices[0][0]}", key="nba_coach_choice_a", use_container_width=True):
+                    st.session_state.nba_coach_chosen_option    = 0
+                    st.session_state.nba_coach_awaiting_outcome = True
+                    st.rerun()
+            with col_nbcb:
+                if st.button(f"**B:** {choices[1][0]}", key="nba_coach_choice_b", use_container_width=True):
+                    st.session_state.nba_coach_chosen_option    = 1
+                    st.session_state.nba_coach_awaiting_outcome = True
+                    st.rerun()
+
+    elif nba_coach_stage_idx >= len(_NBA_COACH_STAGES):
+        manager = st.session_state.nba_coach_manager
+        stats   = st.session_state.nba_coach_stats
+        rating, badge = _nba_coach_career_rating(stats)
+
+        st.markdown(f"## \U0001f3c1 {manager['name']} \u2014 NBA Coaching Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem;background:linear-gradient(90deg,#1a1a2e,#552583);">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{manager['philosophy']}**")
+
+        nbr1, nbr2, nbr3, nbr4 = st.columns(4)
+        with nbr1: st.metric("\U0001f3c5 Career Wins",         stats["wins"])
+        with nbr2: st.metric("\U0001f3c6 Championships Won",   stats["championships"])
+        with nbr3: st.metric("\U0001f331 Players Developed",   stats["players_developed"])
+        with nbr4: st.metric("\u2b50 Total Reputation",        stats["reputation"])
+
+        st.markdown("---")
+        st.markdown("### \U0001f4d6 NBA Coaching Chronicle")
+        for entry in st.session_state.nba_coach_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #552583;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#a060d0">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Chose: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if st.button("\U0001f504 Start a New NBA Coaching Career", key="nba_coach_restart"):
+            st.session_state.nba_coach_manager          = None
+            st.session_state.nba_coach_stage_idx        = -1
+            st.session_state.nba_coach_awaiting_outcome = False
+            st.session_state.nba_coach_chosen_option    = None
+            st.session_state.nba_coach_narrative        = ""
+            st.session_state.nba_coach_choices          = []
+            st.session_state.nba_coach_outcome_text     = ""
+            st.session_state.nba_coach_stats            = {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0}
+            st.session_state.nba_coach_history          = []
             st.rerun()
