@@ -272,6 +272,7 @@ DEFAULTS = {
     "coach_outcome_text":  "",
     "coach_stats":         {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0},
     "coach_history":       [],
+    "coach_prefill":       None,   # {name, nationality} pre-filled from player sim transition
 }
 
 for k, v in DEFAULTS.items():
@@ -1973,17 +1974,38 @@ with tab_ai:
                 unsafe_allow_html=True,
             )
 
-        if st.button("🔄 Start a New Career", key="ai_restart"):
-            st.session_state.ai_player           = None
-            st.session_state.ai_stage_idx        = -1
-            st.session_state.ai_awaiting_outcome = False
-            st.session_state.ai_chosen_option    = None
-            st.session_state.ai_narrative        = ""
-            st.session_state.ai_choices          = []
-            st.session_state.ai_outcome_text     = ""
-            st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
-            st.session_state.ai_history          = []
-            st.rerun()
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("🔄 Start a New Career", key="ai_restart"):
+                st.session_state.ai_player           = None
+                st.session_state.ai_stage_idx        = -1
+                st.session_state.ai_awaiting_outcome = False
+                st.session_state.ai_chosen_option    = None
+                st.session_state.ai_narrative        = ""
+                st.session_state.ai_choices          = []
+                st.session_state.ai_outcome_text     = ""
+                st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
+                st.session_state.ai_history          = []
+                st.rerun()
+        with btn_col2:
+            if st.button("🧑‍💼 Continue as Coach", key="ai_to_coach"):
+                st.session_state.coach_prefill          = {
+                    "name":        player["name"],
+                    "nationality": player["nationality"],
+                }
+                st.session_state.coach_manager          = None
+                st.session_state.coach_stage_idx        = -1
+                st.session_state.coach_awaiting_outcome = False
+                st.session_state.coach_chosen_option    = None
+                st.session_state.coach_narrative        = ""
+                st.session_state.coach_choices          = []
+                st.session_state.coach_outcome_text     = ""
+                st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
+                st.session_state.coach_history          = []
+                st.rerun()
+
+        if st.session_state.coach_prefill:
+            st.info("🧑‍💼 Your coaching career is ready! Head to the **Coach Career Sim** tab to begin your managerial journey.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COACH CAREER SIM — constants, helpers, tab rendering
@@ -2229,15 +2251,25 @@ with tab_coach:
 
     coach_stage_idx = st.session_state.coach_stage_idx
     coach_manager   = st.session_state.coach_manager
+    coach_prefill   = st.session_state.coach_prefill
 
     # ── Manager creation form ─────────────────────────────────────────────────
     if coach_stage_idx == -1:
+        if coach_prefill:
+            st.success(
+                f"🎉 Welcome to management, **{coach_prefill['name']}**! "
+                f"Your playing days are over — now it's time to shape the beautiful game from the dugout. "
+                f"Choose your coaching philosophy to begin."
+            )
+
         st.markdown("### 📋 Create Your Manager")
         col_cf1, col_cf2 = st.columns(2)
         with col_cf1:
-            coach_name = st.text_input("Manager Name", placeholder="e.g. Ana Ferreira", key="coach_name_input")
+            _default_name = coach_prefill["name"] if coach_prefill else ""
+            coach_name = st.text_input("Manager Name", value=_default_name, placeholder="e.g. Ana Ferreira", key="coach_name_input")
             coach_nat_options = sorted(list(FLAGS.keys()) + _AI_EXTRA_NATIONALITIES)
-            coach_nat = st.selectbox("Nationality", coach_nat_options, key="coach_nat_input")
+            _default_nat_idx = coach_nat_options.index(coach_prefill["nationality"]) if coach_prefill and coach_prefill["nationality"] in coach_nat_options else 0
+            coach_nat = st.selectbox("Nationality", coach_nat_options, index=_default_nat_idx, key="coach_nat_input")
         with col_cf2:
             coach_philosophy = st.selectbox("Coaching Philosophy", _COACH_PHILOSOPHIES, key="coach_phil_input")
 
@@ -2250,6 +2282,7 @@ with tab_coach:
                     "nationality": coach_nat,
                     "philosophy": coach_philosophy,
                 }
+                st.session_state.coach_prefill          = None
                 st.session_state.coach_stage_idx        = 0
                 st.session_state.coach_awaiting_outcome = False
                 st.session_state.coach_chosen_option    = None
