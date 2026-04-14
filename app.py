@@ -703,7 +703,7 @@ with tab_fg:
 
     # Legend
     st.markdown(
-        "🟩 **Correct** &nbsp;&nbsp; 🟨 **Close** (age ±6 yrs) &nbsp;&nbsp; �� **Wrong**",
+        "🟩 **Correct** &nbsp;&nbsp; 🟨 **Close** (age ±6 yrs) &nbsp;&nbsp; 🟥 **Wrong**",
         unsafe_allow_html=True
     )
 
