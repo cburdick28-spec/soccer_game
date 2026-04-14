@@ -514,162 +514,162 @@ with tab_career:
 
     if cp is None:
         st.info("👈 Click **New Player** to start!")
-        st.stop()
-
-    career   = cp["career"]
-    revealed = st.session_state.career_revealed
-    won      = st.session_state.career_won
-    gave_up  = st.session_state.career_gave_up
-    wrong_guesses = [g for g in st.session_state.career_guesses if g != cp["name"]]
-
-    # ── Metrics bar ──────────────────────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns(4)
-    base_pts = score_for_guess(revealed, len(career))
-    penalty  = st.session_state.career_hint_penalty
-    with c1:
-        st.metric("Clubs Revealed", f"{revealed} / {len(career)}")
-    with c2:
-        st.metric("Points if correct now", f"⭐ {max(0, base_pts - penalty)}")
-    with c3:
-        st.metric("Wrong Guesses", f"{len(wrong_guesses)} / 5")
-    with c4:
-        st.metric("Position Group", cp["position_group"])
-
-    # ── Hints section ─────────────────────────────────────────────────────────
-    if not won and not gave_up:
-        hints_used = st.session_state.career_hints_used
-        with st.expander("💡 Hints  (each costs points from your score)"):
-            h1, h2, h3 = st.columns(3)
-            with h1:
-                if "nationality" not in hints_used:
-                    if st.button("🌍 Nationality (-100 pts)", key="hint_nat"):
-                        st.session_state.career_hints_used.append("nationality")
-                        st.session_state.career_hint_penalty += 100
-                        st.rerun()
-                else:
-                    flag = FLAGS.get(cp["nationality"], "🌍")
-                    st.markdown(f'<div class="hint-box">🌍 {flag} {cp["nationality"]}</div>', unsafe_allow_html=True)
-            with h2:
-                if "continent" not in hints_used:
-                    if st.button("🗺️ Continent (-75 pts)", key="hint_cont"):
-                        st.session_state.career_hints_used.append("continent")
-                        st.session_state.career_hint_penalty += 75
-                        st.rerun()
-                else:
-                    st.markdown(f'<div class="hint-box">🗺️ {get_meta(cp, "continent", "?")}</div>', unsafe_allow_html=True)
-            with h3:
-                if "birth_decade" not in hints_used:
-                    if st.button("🎂 Birth Decade (-50 pts)", key="hint_age"):
-                        st.session_state.career_hints_used.append("birth_decade")
-                        st.session_state.career_hint_penalty += 50
-                        st.rerun()
-                else:
-                    decade = (cp["birth_year"] // 10) * 10
-                    st.markdown(f'<div class="hint-box">🎂 Born in the {decade}s</div>', unsafe_allow_html=True)
-
-    # ── Career cards ──────────────────────────────────────────────────────────
-    st.markdown("### 🏟️ Career Path")
-    show_count = revealed if not (won or gave_up) else len(career)
-    if show_count == 0 and not (won or gave_up):
-        st.info("No clubs revealed yet. Click **Reveal Next Club** to start.")
     else:
-        for entry in career[:show_count]:
-            lg     = entry["league"]
-            colour = LEAGUE_COLOURS.get(lg, LEAGUE_COLOURS.get("Other", "#555555"))
-            st.markdown(f"""
-<div class="career-card" style="border-left-color:{colour}">
-  <span class="club-name">🏟️ {entry['club']}</span>
-  <span class="club-detail"> &nbsp;|&nbsp; {lg} &nbsp;|&nbsp; {entry['years']}</span>
-</div>""", unsafe_allow_html=True)
 
-    # ── Action buttons ────────────────────────────────────────────────────────
-    if not won and not gave_up:
-        col_reveal, _ = st.columns([1, 3])
-        with col_reveal:
-            if revealed < len(career):
-                if st.button("🔍 Reveal Next Club", key="reveal_club"):
-                    st.session_state.career_revealed += 1
-                    st.rerun()
-            else:
-                st.warning("All clubs revealed! Take a guess below.")
+        career   = cp["career"]
+        revealed = st.session_state.career_revealed
+        won      = st.session_state.career_won
+        gave_up  = st.session_state.career_gave_up
+        wrong_guesses = [g for g in st.session_state.career_guesses if g != cp["name"]]
 
-        st.markdown("### 🤔 Your Guess")
-        all_names = all_player_names()
-        guess = st.selectbox(
-            "Type or select a player name:",
-            options=[""] + all_names,
-            key=f"career_guess_{st.session_state.career_input_key}",
-            label_visibility="collapsed",
-        )
+        # ── Metrics bar ──────────────────────────────────────────────────────────
+        c1, c2, c3, c4 = st.columns(4)
+        base_pts = score_for_guess(revealed, len(career))
+        penalty  = st.session_state.career_hint_penalty
+        with c1:
+            st.metric("Clubs Revealed", f"{revealed} / {len(career)}")
+        with c2:
+            st.metric("Points if correct now", f"⭐ {max(0, base_pts - penalty)}")
+        with c3:
+            st.metric("Wrong Guesses", f"{len(wrong_guesses)} / 5")
+        with c4:
+            st.metric("Position Group", cp["position_group"])
 
-        col_guess, col_giveup = st.columns([1, 1])
-        with col_guess:
-            if st.button("✅ Submit Guess", key="submit_career"):
-                if not guess:
-                    st.warning("Please select a player first.")
-                else:
-                    st.session_state.career_guesses.append(guess)
-                    if guess == cp["name"]:
-                        pts = max(0, score_for_guess(revealed, len(career)) - st.session_state.career_hint_penalty)
-                        st.session_state.total_score   += pts
-                        st.session_state.rounds_played += 1
-                        st.session_state.win_streak    += 1
-                        st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
-                        st.session_state.career_won     = True
-                        st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": True, "points": pts})
-                        st.rerun()
+        # ── Hints section ─────────────────────────────────────────────────────────
+        if not won and not gave_up:
+            hints_used = st.session_state.career_hints_used
+            with st.expander("💡 Hints  (each costs points from your score)"):
+                h1, h2, h3 = st.columns(3)
+                with h1:
+                    if "nationality" not in hints_used:
+                        if st.button("🌍 Nationality (-100 pts)", key="hint_nat"):
+                            st.session_state.career_hints_used.append("nationality")
+                            st.session_state.career_hint_penalty += 100
+                            st.rerun()
                     else:
-                        wg = [g for g in st.session_state.career_guesses if g != cp["name"]]
-                        if len(wg) >= 5:
-                            st.session_state.career_gave_up   = True
-                            st.session_state.rounds_played    += 1
-                            st.session_state.win_streak        = 0
-                            st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": False, "points": 0})
+                        flag = FLAGS.get(cp["nationality"], "🌍")
+                        st.markdown(f'<div class="hint-box">🌍 {flag} {cp["nationality"]}</div>', unsafe_allow_html=True)
+                with h2:
+                    if "continent" not in hints_used:
+                        if st.button("🗺️ Continent (-75 pts)", key="hint_cont"):
+                            st.session_state.career_hints_used.append("continent")
+                            st.session_state.career_hint_penalty += 75
+                            st.rerun()
+                    else:
+                        st.markdown(f'<div class="hint-box">🗺️ {get_meta(cp, "continent", "?")}</div>', unsafe_allow_html=True)
+                with h3:
+                    if "birth_decade" not in hints_used:
+                        if st.button("🎂 Birth Decade (-50 pts)", key="hint_age"):
+                            st.session_state.career_hints_used.append("birth_decade")
+                            st.session_state.career_hint_penalty += 50
+                            st.rerun()
+                    else:
+                        decade = (cp["birth_year"] // 10) * 10
+                        st.markdown(f'<div class="hint-box">🎂 Born in the {decade}s</div>', unsafe_allow_html=True)
+
+        # ── Career cards ──────────────────────────────────────────────────────────
+        st.markdown("### 🏟️ Career Path")
+        show_count = revealed if not (won or gave_up) else len(career)
+        if show_count == 0 and not (won or gave_up):
+            st.info("No clubs revealed yet. Click **Reveal Next Club** to start.")
+        else:
+            for entry in career[:show_count]:
+                lg     = entry["league"]
+                colour = LEAGUE_COLOURS.get(lg, LEAGUE_COLOURS.get("Other", "#555555"))
+                st.markdown(f"""
+    <div class="career-card" style="border-left-color:{colour}">
+      <span class="club-name">🏟️ {entry['club']}</span>
+      <span class="club-detail"> &nbsp;|&nbsp; {lg} &nbsp;|&nbsp; {entry['years']}</span>
+    </div>""", unsafe_allow_html=True)
+
+        # ── Action buttons ────────────────────────────────────────────────────────
+        if not won and not gave_up:
+            col_reveal, _ = st.columns([1, 3])
+            with col_reveal:
+                if revealed < len(career):
+                    if st.button("🔍 Reveal Next Club", key="reveal_club"):
+                        st.session_state.career_revealed += 1
+                        st.rerun()
+                else:
+                    st.warning("All clubs revealed! Take a guess below.")
+
+            st.markdown("### 🤔 Your Guess")
+            all_names = all_player_names()
+            guess = st.selectbox(
+                "Type or select a player name:",
+                options=[""] + all_names,
+                key=f"career_guess_{st.session_state.career_input_key}",
+                label_visibility="collapsed",
+            )
+
+            col_guess, col_giveup = st.columns([1, 1])
+            with col_guess:
+                if st.button("✅ Submit Guess", key="submit_career"):
+                    if not guess:
+                        st.warning("Please select a player first.")
+                    else:
+                        st.session_state.career_guesses.append(guess)
+                        if guess == cp["name"]:
+                            pts = max(0, score_for_guess(revealed, len(career)) - st.session_state.career_hint_penalty)
+                            st.session_state.total_score   += pts
+                            st.session_state.rounds_played += 1
+                            st.session_state.win_streak    += 1
+                            st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
+                            st.session_state.career_won     = True
+                            st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": True, "points": pts})
                             st.rerun()
                         else:
-                            st.session_state.career_input_key += 1
-                            st.rerun()
-        with col_giveup:
-            if st.button("🏳️ Give Up", key="giveup_career"):
-                st.session_state.career_gave_up   = True
-                st.session_state.rounds_played    += 1
-                st.session_state.win_streak        = 0
-                st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": False, "points": 0})
-                st.rerun()
+                            wg = [g for g in st.session_state.career_guesses if g != cp["name"]]
+                            if len(wg) >= 5:
+                                st.session_state.career_gave_up   = True
+                                st.session_state.rounds_played    += 1
+                                st.session_state.win_streak        = 0
+                                st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": False, "points": 0})
+                                st.rerun()
+                            else:
+                                st.session_state.career_input_key += 1
+                                st.rerun()
+            with col_giveup:
+                if st.button("🏳️ Give Up", key="giveup_career"):
+                    st.session_state.career_gave_up   = True
+                    st.session_state.rounds_played    += 1
+                    st.session_state.win_streak        = 0
+                    st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": False, "points": 0})
+                    st.rerun()
 
-        if wrong_guesses:
-            st.markdown("**❌ Wrong guesses:** " + " • ".join(wrong_guesses))
+            if wrong_guesses:
+                st.markdown("**❌ Wrong guesses:** " + " • ".join(wrong_guesses))
 
-    # ── Game-over panel ───────────────────────────────────────────────────────
-    if won or gave_up:
-        flag = FLAGS.get(cp["nationality"], "🌍")
-        if won:
-            pts = max(0, score_for_guess(
-                next((i for i, g in enumerate(st.session_state.career_guesses) if g == cp["name"]), revealed),
-                len(career)
-            ) - st.session_state.career_hint_penalty)
-            st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{cp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="result-wrong">😔 The answer was <b>{cp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
+        # ── Game-over panel ───────────────────────────────────────────────────────
+        if won or gave_up:
+            flag = FLAGS.get(cp["nationality"], "🌍")
+            if won:
+                pts = max(0, score_for_guess(
+                    next((i for i, g in enumerate(st.session_state.career_guesses) if g == cp["name"]), revealed),
+                    len(career)
+                ) - st.session_state.career_hint_penalty)
+                st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{cp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="result-wrong">😔 The answer was <b>{cp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
 
-        st.markdown("### 📋 Full Career")
-        for entry in career:
-            lg     = entry["league"]
-            colour = LEAGUE_COLOURS.get(lg, "#555555")
-            st.markdown(f"""
-<div class="career-card" style="border-left-color:{colour}">
-  <span class="club-name">🏟️ {entry['club']}</span>
-  <span class="club-detail"> &nbsp;|&nbsp; {lg} &nbsp;|&nbsp; {entry['years']}</span>
-</div>""", unsafe_allow_html=True)
+            st.markdown("### 📋 Full Career")
+            for entry in career:
+                lg     = entry["league"]
+                colour = LEAGUE_COLOURS.get(lg, "#555555")
+                st.markdown(f"""
+    <div class="career-card" style="border-left-color:{colour}">
+      <span class="club-name">🏟️ {entry['club']}</span>
+      <span class="club-detail"> &nbsp;|&nbsp; {lg} &nbsp;|&nbsp; {entry['years']}</span>
+    </div>""", unsafe_allow_html=True)
 
-        st.markdown("### 🌟 Player Profile")
-        render_player_profile(cp)
+            st.markdown("### 🌟 Player Profile")
+            render_player_profile(cp)
 
-        if st.button("▶️ Play Again", key="play_again_career"):
-            pool = get_filtered()
-            if pool:
-                reset_career(pick_random_player(pool))
-                st.rerun()
+            if st.button("▶️ Play Again", key="play_again_career"):
+                pool = get_filtered()
+                if pool:
+                    reset_career(pick_random_player(pool))
+                    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — FOOTBALLER GUESSER
@@ -689,82 +689,82 @@ with tab_fg:
 
     if fgp is None:
         st.info("👈 Click **New Player** to start!")
-        st.stop()
+    else:
 
-    won_fg     = st.session_state.fg_won
-    gave_up_fg = st.session_state.fg_gave_up
-    flag = FLAGS.get(fgp["nationality"], "🌍")
+        won_fg     = st.session_state.fg_won
+        gave_up_fg = st.session_state.fg_gave_up
+        flag = FLAGS.get(fgp["nationality"], "🌍")
 
-    if won_fg:
-        pts = max(200, 1000 - (len(guesses) - 1) * 100)
-        st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{fgp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
-    elif gave_up_fg:
-        st.markdown(f'<div class="result-wrong">😔 The answer was <b>{fgp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
+        if won_fg:
+            pts = max(200, 1000 - (len(guesses) - 1) * 100)
+            st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{fgp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
+        elif gave_up_fg:
+            st.markdown(f'<div class="result-wrong">😔 The answer was <b>{fgp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
 
-    # Legend
-    st.markdown(
-        "🟩 **Correct** &nbsp;&nbsp; 🟨 **Close** (age ±6 yrs) &nbsp;&nbsp; 🟥 **Wrong**",
-        unsafe_allow_html=True
-    )
-
-    render_fg_header()
-    for guess_name, cmp in guesses:
-        render_fg_row(guess_name, cmp)
-
-    # ── Guess input ───────────────────────────────────────────────────────────
-    if not won_fg and not gave_up_fg:
-        st.markdown("### 🤔 Guess a Footballer")
-        already_guessed = [g[0] for g in guesses]
-        remaining = [n for n in all_player_names() if n not in already_guessed]
-
-        fg_guess = st.selectbox(
-            "Type or select a player:",
-            options=[""] + remaining,
-            key=f"fg_guess_{st.session_state.fg_input_key}",
-            label_visibility="collapsed",
+        # Legend
+        st.markdown(
+            "🟩 **Correct** &nbsp;&nbsp; 🟨 **Close** (age ±6 yrs) &nbsp;&nbsp; 🟥 **Wrong**",
+            unsafe_allow_html=True
         )
 
-        col_g, col_gu = st.columns([1, 1])
-        with col_g:
-            if st.button("✅ Submit Guess", key="submit_fg"):
-                if not fg_guess:
-                    st.warning("Select a player first.")
-                else:
-                    gp = name_to_player.get(fg_guess)
-                    if gp is None:
-                        st.warning("Unknown player.")
+        render_fg_header()
+        for guess_name, cmp in guesses:
+            render_fg_row(guess_name, cmp)
+
+        # ── Guess input ───────────────────────────────────────────────────────────
+        if not won_fg and not gave_up_fg:
+            st.markdown("### 🤔 Guess a Footballer")
+            already_guessed = [g[0] for g in guesses]
+            remaining = [n for n in all_player_names() if n not in already_guessed]
+
+            fg_guess = st.selectbox(
+                "Type or select a player:",
+                options=[""] + remaining,
+                key=f"fg_guess_{st.session_state.fg_input_key}",
+                label_visibility="collapsed",
+            )
+
+            col_g, col_gu = st.columns([1, 1])
+            with col_g:
+                if st.button("✅ Submit Guess", key="submit_fg"):
+                    if not fg_guess:
+                        st.warning("Select a player first.")
                     else:
-                        cmp = compare_players(gp, fgp)
-                        st.session_state.fg_guesses.append((fg_guess, cmp))
-                        if fg_guess == fgp["name"]:
-                            pts = max(200, 1000 - (len(st.session_state.fg_guesses) - 1) * 100)
-                            st.session_state.total_score   += pts
-                            st.session_state.rounds_played += 1
-                            st.session_state.win_streak    += 1
-                            st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
-                            st.session_state.fg_won         = True
-                            st.session_state.history.append({"mode": "Guesser", "name": fgp["name"], "won": True, "points": pts})
-                        st.session_state.fg_input_key += 1
-                        st.rerun()
-        with col_gu:
-            if st.button("🏳️ Give Up", key="giveup_fg"):
-                st.session_state.fg_gave_up    = True
-                st.session_state.rounds_played += 1
-                st.session_state.win_streak     = 0
-                st.session_state.history.append({"mode": "Guesser", "name": fgp["name"], "won": False, "points": 0})
-                st.rerun()
+                        gp = name_to_player.get(fg_guess)
+                        if gp is None:
+                            st.warning("Unknown player.")
+                        else:
+                            cmp = compare_players(gp, fgp)
+                            st.session_state.fg_guesses.append((fg_guess, cmp))
+                            if fg_guess == fgp["name"]:
+                                pts = max(200, 1000 - (len(st.session_state.fg_guesses) - 1) * 100)
+                                st.session_state.total_score   += pts
+                                st.session_state.rounds_played += 1
+                                st.session_state.win_streak    += 1
+                                st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
+                                st.session_state.fg_won         = True
+                                st.session_state.history.append({"mode": "Guesser", "name": fgp["name"], "won": True, "points": pts})
+                            st.session_state.fg_input_key += 1
+                            st.rerun()
+            with col_gu:
+                if st.button("🏳️ Give Up", key="giveup_fg"):
+                    st.session_state.fg_gave_up    = True
+                    st.session_state.rounds_played += 1
+                    st.session_state.win_streak     = 0
+                    st.session_state.history.append({"mode": "Guesser", "name": fgp["name"], "won": False, "points": 0})
+                    st.rerun()
 
-        if guesses:
-            st.caption(f"💡 Guesses so far: {len(guesses)}")
+            if guesses:
+                st.caption(f"💡 Guesses so far: {len(guesses)}")
 
-    if won_fg or gave_up_fg:
-        st.markdown("### 🌟 Player Profile")
-        render_player_profile(fgp)
-        if st.button("▶️ Play Again", key="play_again_fg"):
-            pool = get_filtered()
-            if pool:
-                reset_fg(pick_random_player(pool))
-                st.rerun()
+        if won_fg or gave_up_fg:
+            st.markdown("### 🌟 Player Profile")
+            render_player_profile(fgp)
+            if st.button("▶️ Play Again", key="play_again_fg"):
+                pool = get_filtered()
+                if pool:
+                    reset_fg(pick_random_player(pool))
+                    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — TROPHY CABINET
@@ -784,103 +784,103 @@ with tab_tc:
 
     if tcp is None:
         st.info("👈 Click **New Player** to start!")
-        st.stop()
-
-    trophies    = tcp["trophies"]
-    tc_revealed = st.session_state.tc_revealed
-    tc_won      = st.session_state.tc_won
-    tc_gave_up  = st.session_state.tc_gave_up
-    tc_wrong    = [g for g in st.session_state.tc_guesses if g != tcp["name"]]
-    flag        = FLAGS.get(tcp["nationality"], "🌍")
-
-    # Metrics
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Trophies Revealed", f"{tc_revealed} / {len(trophies)}")
-    with c2:
-        tc_pts = score_for_guess(tc_revealed, len(trophies))
-        st.metric("Points if correct now", f"⭐ {tc_pts}")
-    with c3:
-        st.metric("Wrong Guesses", f"{len(tc_wrong)} / 5")
-
-    # Trophy cards
-    st.markdown("### 🏆 Trophy Cabinet")
-    show_tc = tc_revealed if not (tc_won or tc_gave_up) else len(trophies)
-    if show_tc == 0 and not (tc_won or tc_gave_up):
-        st.info("No trophies revealed yet. Click **Reveal Next Trophy** to start.")
     else:
-        for t in trophies[:show_tc]:
-            st.markdown(f'<div class="trophy-card">🏆 {t}</div>', unsafe_allow_html=True)
 
-    if not tc_won and not tc_gave_up:
-        col_rev, _ = st.columns([1, 3])
-        with col_rev:
-            if tc_revealed < len(trophies):
-                if st.button("🔍 Reveal Next Trophy", key="reveal_trophy"):
-                    st.session_state.tc_revealed += 1
-                    st.rerun()
-            else:
-                st.warning("All trophies revealed! Take a guess.")
+        trophies    = tcp["trophies"]
+        tc_revealed = st.session_state.tc_revealed
+        tc_won      = st.session_state.tc_won
+        tc_gave_up  = st.session_state.tc_gave_up
+        tc_wrong    = [g for g in st.session_state.tc_guesses if g != tcp["name"]]
+        flag        = FLAGS.get(tcp["nationality"], "🌍")
 
-        st.markdown("### 🤔 Your Guess")
-        tc_guess = st.selectbox(
-            "Type or select a player:",
-            options=[""] + all_player_names(),
-            key=f"tc_guess_{st.session_state.tc_input_key}",
-            label_visibility="collapsed",
-        )
-        col_tg, col_tgu = st.columns([1, 1])
-        with col_tg:
-            if st.button("✅ Submit Guess", key="submit_tc"):
-                if not tc_guess:
-                    st.warning("Select a player first.")
-                else:
-                    st.session_state.tc_guesses.append(tc_guess)
-                    if tc_guess == tcp["name"]:
-                        pts = score_for_guess(tc_revealed, len(trophies))
-                        st.session_state.total_score   += pts
-                        st.session_state.rounds_played += 1
-                        st.session_state.win_streak    += 1
-                        st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
-                        st.session_state.tc_won         = True
-                        st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": True, "points": pts})
+        # Metrics
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Trophies Revealed", f"{tc_revealed} / {len(trophies)}")
+        with c2:
+            tc_pts = score_for_guess(tc_revealed, len(trophies))
+            st.metric("Points if correct now", f"⭐ {tc_pts}")
+        with c3:
+            st.metric("Wrong Guesses", f"{len(tc_wrong)} / 5")
+
+        # Trophy cards
+        st.markdown("### 🏆 Trophy Cabinet")
+        show_tc = tc_revealed if not (tc_won or tc_gave_up) else len(trophies)
+        if show_tc == 0 and not (tc_won or tc_gave_up):
+            st.info("No trophies revealed yet. Click **Reveal Next Trophy** to start.")
+        else:
+            for t in trophies[:show_tc]:
+                st.markdown(f'<div class="trophy-card">🏆 {t}</div>', unsafe_allow_html=True)
+
+        if not tc_won and not tc_gave_up:
+            col_rev, _ = st.columns([1, 3])
+            with col_rev:
+                if tc_revealed < len(trophies):
+                    if st.button("🔍 Reveal Next Trophy", key="reveal_trophy"):
+                        st.session_state.tc_revealed += 1
                         st.rerun()
+                else:
+                    st.warning("All trophies revealed! Take a guess.")
+
+            st.markdown("### 🤔 Your Guess")
+            tc_guess = st.selectbox(
+                "Type or select a player:",
+                options=[""] + all_player_names(),
+                key=f"tc_guess_{st.session_state.tc_input_key}",
+                label_visibility="collapsed",
+            )
+            col_tg, col_tgu = st.columns([1, 1])
+            with col_tg:
+                if st.button("✅ Submit Guess", key="submit_tc"):
+                    if not tc_guess:
+                        st.warning("Select a player first.")
                     else:
-                        if len(tc_wrong) + 1 >= 5:
-                            st.session_state.tc_gave_up    = True
+                        st.session_state.tc_guesses.append(tc_guess)
+                        if tc_guess == tcp["name"]:
+                            pts = score_for_guess(tc_revealed, len(trophies))
+                            st.session_state.total_score   += pts
                             st.session_state.rounds_played += 1
-                            st.session_state.win_streak     = 0
-                            st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": False, "points": 0})
+                            st.session_state.win_streak    += 1
+                            st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
+                            st.session_state.tc_won         = True
+                            st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": True, "points": pts})
                             st.rerun()
                         else:
-                            st.session_state.tc_input_key += 1
-                            st.rerun()
-        with col_tgu:
-            if st.button("🏳️ Give Up", key="giveup_tc"):
-                st.session_state.tc_gave_up    = True
-                st.session_state.rounds_played += 1
-                st.session_state.win_streak     = 0
-                st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": False, "points": 0})
-                st.rerun()
+                            if len(tc_wrong) + 1 >= 5:
+                                st.session_state.tc_gave_up    = True
+                                st.session_state.rounds_played += 1
+                                st.session_state.win_streak     = 0
+                                st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": False, "points": 0})
+                                st.rerun()
+                            else:
+                                st.session_state.tc_input_key += 1
+                                st.rerun()
+            with col_tgu:
+                if st.button("🏳️ Give Up", key="giveup_tc"):
+                    st.session_state.tc_gave_up    = True
+                    st.session_state.rounds_played += 1
+                    st.session_state.win_streak     = 0
+                    st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": False, "points": 0})
+                    st.rerun()
 
-        if tc_wrong:
-            st.markdown("**❌ Wrong guesses:** " + " • ".join(tc_wrong))
+            if tc_wrong:
+                st.markdown("**❌ Wrong guesses:** " + " • ".join(tc_wrong))
 
-    if tc_won or tc_gave_up:
-        if tc_won:
-            pts = score_for_guess(tc_revealed, len(trophies))
-            st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{tcp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="result-wrong">😔 The answer was <b>{tcp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
+        if tc_won or tc_gave_up:
+            if tc_won:
+                pts = score_for_guess(tc_revealed, len(trophies))
+                st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{tcp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="result-wrong">😔 The answer was <b>{tcp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
 
-        st.markdown("### 🌟 Player Profile")
-        render_player_profile(tcp)
+            st.markdown("### 🌟 Player Profile")
+            render_player_profile(tcp)
 
-        if st.button("▶️ Play Again", key="play_again_tc"):
-            pool = get_filtered()
-            if pool:
-                reset_tc(pick_random_player(pool))
-                st.rerun()
+            if st.button("▶️ Play Again", key="play_again_tc"):
+                pool = get_filtered()
+                if pool:
+                    reset_tc(pick_random_player(pool))
+                    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — DAILY CHALLENGE
