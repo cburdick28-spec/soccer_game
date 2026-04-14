@@ -239,6 +239,17 @@ DEFAULTS = {
     "filter_difficulty":   "All",
     "filter_continent":    "All Continents",
     "filter_world_cup":    "All",
+    # AI Career Simulator
+    "openai_api_key":      "",
+    "ai_player":           None,   # {name, nationality, position_group, style}
+    "ai_stage_idx":        -1,     # -1=not started, 0-4=stage, 5=ended
+    "ai_awaiting_outcome": False,  # True=user chose, showing outcome; False=showing choices
+    "ai_chosen_option":    None,   # 0 or 1
+    "ai_narrative":        "",
+    "ai_choices":          [],     # [(text, stat_delta), (text, stat_delta)]
+    "ai_outcome_text":     "",
+    "ai_stats":            {"goals": 0, "assists": 0, "trophies": 0, "caps": 0},
+    "ai_history":          [],     # list of {stage, choice, outcome, delta}
 }
 
 for k, v in DEFAULTS.items():
@@ -390,19 +401,34 @@ with st.sidebar:
 - Build your daily streak!  
 """)
 
+    st.markdown("---")
+    st.markdown("### 🤖 AI Career Sim")
+    ai_key = st.text_input(
+        "OpenAI API Key (optional)",
+        type="password",
+        key="sidebar_openai_key",
+        placeholder="sk-... (enables AI narratives)",
+        help="Provide your OpenAI API key to generate personalised AI narratives. Without a key the simulator uses built-in story templates.",
+    )
+    if ai_key:
+        st.session_state.openai_api_key = ai_key
+    if st.session_state.openai_api_key:
+        st.caption("✅ AI narratives enabled")
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Main area — title
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Guesser</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 5 game modes · 9-attribute comparison</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 6 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_career, tab_fg, tab_tc, tab_daily, tab_stats = st.tabs([
+tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai = st.tabs([
     "🏟️ Career Timeline",
     "🟩 Footballer Guesser",
     "🏆 Trophy Cabinet",
     "📅 Daily Challenge",
     "📊 Stats & Achievements",
+    "🤖 AI Career Sim",
 ])
 
 # ─────────────────── helpers ──────────────────────────────────────────────────
@@ -1215,3 +1241,488 @@ with tab_stats:
     else:
         st.info("No players found.")
     st.caption(f"Total players in database: {len(PLAYERS)}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 6 — AI CAREER SIMULATOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── AI Career Sim: constants ─────────────────────────────────────────────────
+_AI_PLAYING_STYLES = [
+    "Technical Dribbler", "Powerful Striker", "Playmaking Maestro",
+    "Defensive Anchor", "Aerial Threat", "Speed Merchant",
+    "Box-to-Box Engine", "Clinical Finisher",
+]
+
+_AI_EXTRA_NATIONALITIES = [
+    "Mexico", "USA", "Japan", "South Korea", "Australia",
+    "Colombia", "Chile", "Nigeria", "Algeria", "Russia",
+]
+
+_AI_CAREER_STAGES = [
+    {"idx": 0, "id": "youth",   "name": "Youth Academy",       "age": "16–18", "icon": "🌱"},
+    {"idx": 1, "id": "debut",   "name": "Professional Debut",  "age": "18–22", "icon": "⚡"},
+    {"idx": 2, "id": "rise",    "name": "Rising Star",         "age": "22–26", "icon": "📈"},
+    {"idx": 3, "id": "peak",    "name": "Peak Years",          "age": "26–31", "icon": "🏆"},
+    {"idx": 4, "id": "veteran", "name": "Veteran Phase",       "age": "31–36", "icon": "🎯"},
+]
+
+
+def _stage_data(position_group: str) -> list:
+    """Return list of (narrative, choice_a, choice_b) tuples per stage.
+    Each choice is (text: str, stat_delta: dict).
+    """
+    if position_group == "Forward":
+        return [
+            (
+                "{name} arrived at the academy as a pacy {style}, terrorising defenders in reserve fixtures. "
+                "The first-team manager kept a close eye on this emerging talent.",
+                ("Push for a first-team debut this season",                  {"goals": 4,  "assists": 2,  "trophies": 0, "caps": 0}),
+                ("Accept a loan to a lower-league club for more minutes",    {"goals": 9,  "assists": 3,  "trophies": 0, "caps": 0}),
+            ),
+            (
+                "Turning professional, {name}'s sharp movement and instinctive finishing attracted interest from across Europe. "
+                "Two very different paths lay ahead.",
+                ("Sign for a top-flight giant and fight for a squad role",   {"goals": 14, "assists": 8,  "trophies": 1, "caps": 5}),
+                ("Choose a mid-table club for guaranteed first-team minutes", {"goals": 22, "assists": 10, "trophies": 0, "caps": 8}),
+            ),
+            (
+                "A prolific season has made {name} one of the hottest properties in world football at just 22. "
+                "Champions League clubs are circling.",
+                ("Join a Champions League contender",                        {"goals": 30, "assists": 15, "trophies": 2, "caps": 15}),
+                ("Become the undisputed main man at an ambitious club",      {"goals": 45, "assists": 18, "trophies": 1, "caps": 20}),
+            ),
+            (
+                "At 26, {name} is feared by every defence. A world-record offer arrives — "
+                "but so does the chance to cement legendary status at a beloved club.",
+                ("Accept the mega-money move to the wealthiest club",        {"goals": 42, "assists": 22, "trophies": 3, "caps": 20}),
+                ("Stay loyal and chase the title with a beloved club",       {"goals": 55, "assists": 28, "trophies": 4, "caps": 25}),
+            ),
+            (
+                "31 and still dangerous, {name} has accumulated silverware many players only dream of. "
+                "One final chapter remains to be written.",
+                ("Embrace a new challenge in MLS or the Saudi Pro League",   {"goals": 30, "assists": 12, "trophies": 1, "caps": 5}),
+                ("Stay in the top flight and mentor the next generation",    {"goals": 28, "assists": 18, "trophies": 2, "caps": 10}),
+            ),
+        ]
+    elif position_group == "Midfielder":
+        return [
+            (
+                "{name} quickly stood out in the academy with a {style} game that made the coaches compare the youngster "
+                "to midfield legends of the past.",
+                ("Train extra hours on shooting and scoring",                {"goals": 5,  "assists": 6,  "trophies": 0, "caps": 0}),
+                ("Focus on passing range, vision, and game management",      {"goals": 2,  "assists": 12, "trophies": 0, "caps": 0}),
+            ),
+            (
+                "Two clubs made compelling offers. {name}'s ability to control the tempo of matches was already evident — "
+                "but where to develop that talent best?",
+                ("Sign for a glamour club as a squad midfielder",            {"goals": 8,  "assists": 14, "trophies": 1, "caps": 4}),
+                ("Choose a team where {name} will be the heartbeat",         {"goals": 12, "assists": 20, "trophies": 0, "caps": 9}),
+            ),
+            (
+                "22 and flourishing, {name}'s range of passing and box-to-box energy are drawing national headlines. "
+                "A pivotal transfer window opens.",
+                ("Move to a top-four side fighting for the title",           {"goals": 18, "assists": 35, "trophies": 2, "caps": 18}),
+                ("Lead the midfield at an ambitious club building for glory",{"goals": 25, "assists": 40, "trophies": 1, "caps": 22}),
+            ),
+            (
+                "At 26, {name} is arguably the best midfielder in the league. A historic club wants their new midfield general "
+                "and they're willing to pay.",
+                ("Join the historic giant and chase the Champions League",   {"goals": 22, "assists": 42, "trophies": 3, "caps": 22}),
+                ("Stay and break the all-time appearances record",           {"goals": 28, "assists": 50, "trophies": 3, "caps": 28}),
+            ),
+            (
+                "31 and still covering every blade of grass, {name}'s experience compensates for whatever edge of pace "
+                "time has taken. The question now is legacy.",
+                ("Move abroad to a new league for one last challenge",       {"goals": 12, "assists": 25, "trophies": 1, "caps": 8}),
+                ("Stay in domestic football until the very last whistle",    {"goals": 15, "assists": 30, "trophies": 2, "caps": 12}),
+            ),
+        ]
+    elif position_group == "Defender":
+        return [
+            (
+                "{name} was a commanding {style} from day one of the academy, throwing themselves into every training "
+                "session with fearless determination.",
+                ("Develop as a ball-playing sweeper with attacking instincts",{"goals": 3, "assists": 5,  "trophies": 0, "caps": 0}),
+                ("Master the fundamentals — positioning, heading, tackling", {"goals": 1, "assists": 3,  "trophies": 1, "caps": 0}),
+            ),
+            (
+                "Defenders mature late, but {name} was ahead of schedule. Two clubs wanted to sign the young stopper — "
+                "one a title contender, one desperate for defensive solidarity.",
+                ("Join the title contender as a squad defender",             {"goals": 2, "assists": 8,  "trophies": 2, "caps": 4}),
+                ("Anchor the defence at a mid-table club as undisputed no. 1",{"goals": 3, "assists": 10, "trophies": 0, "caps": 9}),
+            ),
+            (
+                "22 and reliable as a rock, {name} is now one of the most sought-after defenders on the continent. "
+                "A powerhouse club wants to build their entire backline around this talent.",
+                ("Sign for the powerhouse — elite level, intense competition",{"goals": 5, "assists": 15, "trophies": 3, "caps": 16}),
+                ("Become the captain of a title-chasing side",               {"goals": 8, "assists": 20, "trophies": 2, "caps": 22}),
+            ),
+            (
+                "At 26, {name} is at the peak of defensive powers. Clean sheets are a regular occurrence and "
+                "a huge club arrives with a lavish offer.",
+                ("Join the mega-club and play in the biggest matches",       {"goals": 5, "assists": 18, "trophies": 3, "caps": 22}),
+                ("Become a club legend — captain them to an unlikely title", {"goals": 8, "assists": 22, "trophies": 4, "caps": 28}),
+            ),
+            (
+                "31 and still a rock. Experience makes {name} even more dangerous — anticipation and positioning "
+                "compensate for any reduction in pace.",
+                ("Accept a final challenge in a top foreign league",         {"goals": 3, "assists": 10, "trophies": 1, "caps": 6}),
+                ("See out the career in the domestic top flight",            {"goals": 4, "assists": 12, "trophies": 2, "caps": 10}),
+            ),
+        ]
+    else:  # Goalkeeper
+        return [
+            (
+                "At 16, {name} had the reflexes of a cat and the presence of a {style}. "
+                "The goalkeeping coach predicted an international career from the very first training session.",
+                ("Work obsessively on shot-stopping, reflexes and positioning",{"goals": 0, "assists": 0, "trophies": 1, "caps": 0}),
+                ("Develop sweeper-keeper skills and precise distribution",    {"goals": 0, "assists": 2, "trophies": 0, "caps": 0}),
+            ),
+            (
+                "{name} is 18 and ready for the professional stage. Goalkeepers need experience — "
+                "but two very different paths are available.",
+                ("Fight for a spot at a top-flight club's first team",        {"goals": 0, "assists": 2, "trophies": 1, "caps": 3}),
+                ("Take a loan to a lower-league club for 200 games in two seasons",{"goals": 0, "assists": 4, "trophies": 0, "caps": 6}),
+            ),
+            (
+                "A string of brilliant performances has made {name} one of the most coveted keepers in Europe. "
+                "Two clubs are desperate to sign them.",
+                ("Join a Champions League regular at a premium price",        {"goals": 0, "assists": 5, "trophies": 3, "caps": 16}),
+                ("Become the undisputed no. 1 at a passionate mid-table club",{"goals": 0, "assists": 8, "trophies": 2, "caps": 22}),
+            ),
+            (
+                "26 and at the absolute peak of their powers, {name} is being talked about as the best goalkeeper "
+                "in the world. A historic contract offer arrives.",
+                ("Sign for the wealthiest club and target every trophy",      {"goals": 0, "assists": 6, "trophies": 4, "caps": 20}),
+                ("Remain loyal and carry the beloved club to an unlikely title",{"goals": 0, "assists": 8, "trophies": 3, "caps": 26}),
+            ),
+            (
+                "31 is young for a goalkeeper. {name} can realistically play at the top level for five more years — "
+                "but where?",
+                ("Move to a glamour league abroad for a new adventure",       {"goals": 0, "assists": 5, "trophies": 1, "caps": 5}),
+                ("Stay as the evergreen no. 1 in the domestic top flight",    {"goals": 0, "assists": 6, "trophies": 2, "caps": 10}),
+            ),
+        ]
+
+
+def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> dict:
+    """Return {narrative, choices: [str, str], stat_deltas: [dict, dict]}.
+    Falls back to templates when api_key is empty or on any error.
+    """
+    templates = _stage_data(player["position_group"])
+    tmpl_narr, tmpl_a, tmpl_b = templates[stage["idx"]]
+    fallback = {
+        "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
+        "choices":     [tmpl_a[0], tmpl_b[0]],
+        "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+    }
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stat_line = (
+            f"Career stats so far: {stats['goals']} goals, {stats['assists']} assists, "
+            f"{stats['trophies']} trophies, {stats['caps']} international caps."
+        ) if stats["goals"] + stats["assists"] + stats["trophies"] + stats["caps"] > 0 else ""
+        prompt = (
+            f"Create a career stage for this footballer:\n"
+            f"Name: {player['name']} | Nationality: {player['nationality']} | "
+            f"Position: {player['position_group']} | Style: {player['style']}\n"
+            f"Stage: {stage['name']} (Age {stage['age']})\n"
+            f"{stat_line}\n\n"
+            f"Respond in EXACTLY this format (keep each section to 1–2 sentences):\n"
+            f"NARRATIVE: [dramatic career narrative for this stage]\n"
+            f"CHOICE_A: [{tmpl_a[0]}]\n"
+            f"CHOICE_B: [{tmpl_b[0]}]"
+        )
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a football career narrator creating an engaging text-adventure game. "
+                    "Be concise, dramatic, and use authentic football details. "
+                    "Keep the two choices close to the template options provided."
+                )},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=220,
+            temperature=0.85,
+        )
+        lines = {}
+        for line in resp.choices[0].message.content.strip().splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                lines[k.strip()] = v.strip()
+        # Fall back to template values for any missing keys
+        return {
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
+            "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+        }
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _ai_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
+    """Return outcome narrative string."""
+    parts = []
+    if delta.get("goals"):    parts.append(f"{delta['goals']} goals")
+    if delta.get("assists"):  parts.append(f"{delta['assists']} assists")
+    if delta.get("trophies"): parts.append(f"{delta['trophies']} trophies")
+    if delta.get("caps"):     parts.append(f"{delta['caps']} international caps")
+    stat_str = ", ".join(parts) if parts else "valuable experience"
+    fallback = (
+        f"A tremendous spell for {player['name']}! "
+        f"The decision paid off with {stat_str} earned across this stage of the career."
+    )
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a football career narrator. Write punchy, vivid outcome paragraphs."
+                )},
+                {"role": "user", "content": (
+                    f"{player['name']} ({player['nationality']} {player['position_group']}) chose: \"{choice_text}\"\n"
+                    f"Stage: {stage['name']}\n"
+                    f"Results: {stat_str}\n\n"
+                    f"Write ONE paragraph (2–3 sentences) describing what happened. "
+                    f"Be specific and dramatic. Do NOT start with the player's name."
+                )},
+            ],
+            max_tokens=130,
+            temperature=0.85,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _career_rating(stats: dict) -> tuple[int, str]:
+    """Return (0-100 rating, badge label) based on accumulated stats."""
+    score = (
+        stats["goals"] * 1.0
+        + stats["assists"] * 0.8
+        + stats["trophies"] * 15
+        + stats["caps"] * 0.5
+    )
+    if score >= 350: return 97, "🐐 All-Time Legend"
+    if score >= 280: return 93, "⭐ World-Class"
+    if score >= 210: return 88, "🌟 Elite"
+    if score >= 140: return 82, "📈 Very Good"
+    if score >= 80:  return 75, "✅ Solid Pro"
+    return 65, "🎓 Journeyman"
+
+
+# ── AI Career Sim: tab rendering ─────────────────────────────────────────────
+with tab_ai:
+    st.markdown("## 🤖 AI Career Simulator")
+    st.markdown(
+        "Create your own footballer and guide them from the youth academy to retirement. "
+        "Every decision shapes your legacy — goals, trophies, caps, and all."
+    )
+    if not st.session_state.openai_api_key:
+        st.info(
+            "💡 **Tip:** Enter your OpenAI API key in the sidebar to unlock AI-generated "
+            "personalised narratives. The simulator works great with built-in story templates too!"
+        )
+
+    ai_stage_idx = st.session_state.ai_stage_idx
+    ai_player    = st.session_state.ai_player
+
+    # ── Career creation form (not yet started) ────────────────────────────────
+    if ai_stage_idx == -1:
+        st.markdown("### ⚽ Create Your Footballer")
+        col_form1, col_form2 = st.columns(2)
+        with col_form1:
+            ai_name = st.text_input("Player Name", placeholder="e.g. Marco Reyes", key="ai_name_input")
+            nat_options = sorted(list(FLAGS.keys()) + _AI_EXTRA_NATIONALITIES)
+            ai_nat = st.selectbox("Nationality", nat_options, key="ai_nat_input")
+        with col_form2:
+            ai_pos = st.selectbox("Position Group", list(POSITIONS.keys()), key="ai_pos_input")
+            ai_style = st.selectbox("Playing Style", _AI_PLAYING_STYLES, key="ai_style_input")
+
+        if st.button("🚀 Start Career", key="ai_start"):
+            if not ai_name.strip():
+                st.warning("Please enter a player name.")
+            else:
+                st.session_state.ai_player = {
+                    "name": ai_name.strip(),
+                    "nationality": ai_nat,
+                    "position_group": ai_pos,
+                    "style": ai_style,
+                }
+                st.session_state.ai_stage_idx       = 0
+                st.session_state.ai_awaiting_outcome = False
+                st.session_state.ai_chosen_option    = None
+                st.session_state.ai_narrative        = ""
+                st.session_state.ai_choices          = []
+                st.session_state.ai_outcome_text     = ""
+                st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
+                st.session_state.ai_history          = []
+                st.rerun()
+
+    # ── Active stage ──────────────────────────────────────────────────────────
+    elif ai_stage_idx < len(_AI_CAREER_STAGES):
+        stage   = _AI_CAREER_STAGES[ai_stage_idx]
+        player  = st.session_state.ai_player
+        stats   = st.session_state.ai_stats
+        api_key = st.session_state.openai_api_key
+
+        # Stage progress bar
+        st.markdown(f"### {stage['icon']} Stage {ai_stage_idx + 1} / {len(_AI_CAREER_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress((ai_stage_idx) / len(_AI_CAREER_STAGES))
+
+        # Live stats bar
+        sc1, sc2, sc3, sc4 = st.columns(4)
+        with sc1:
+            st.metric("⚽ Goals",     stats["goals"])
+        with sc2:
+            st.metric("🎯 Assists",   stats["assists"])
+        with sc3:
+            st.metric("🏆 Trophies",  stats["trophies"])
+        with sc4:
+            st.metric("🌍 Int'l Caps", stats["caps"])
+
+        st.markdown("---")
+
+        # Generate narrative if not yet loaded for this stage
+        if not st.session_state.ai_narrative:
+            with st.spinner("✍️ Writing your career story…"):
+                data = _ai_generate_stage(player, stage, stats, api_key)
+            st.session_state.ai_narrative  = data["narrative"]
+            st.session_state.ai_choices    = list(zip(data["choices"], data["stat_deltas"]))
+            st.rerun()
+
+        # Show narrative
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #1db954;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.ai_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Showing outcome (after choice made) ───────────────────────────────
+        if st.session_state.ai_awaiting_outcome:
+            chosen_idx = st.session_state.ai_chosen_option
+            choice_text, delta = st.session_state.ai_choices[chosen_idx]
+
+            if not st.session_state.ai_outcome_text:
+                with st.spinner("⚡ Simulating the outcome…"):
+                    outcome = _ai_generate_outcome(player, stage, choice_text, delta, api_key)
+                st.session_state.ai_outcome_text = outcome
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(29,185,84,0.1);border-left:4px solid #ffc107;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.ai_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Stat gains
+            gain_parts = []
+            if delta.get("goals"):    gain_parts.append(f"⚽ +{delta['goals']} goals")
+            if delta.get("assists"):  gain_parts.append(f"🎯 +{delta['assists']} assists")
+            if delta.get("trophies"): gain_parts.append(f"🏆 +{delta['trophies']} trophies")
+            if delta.get("caps"):     gain_parts.append(f"🌍 +{delta['caps']} caps")
+            if gain_parts:
+                st.markdown("**Stats earned:** " + "  ·  ".join(gain_parts))
+
+            next_label = "▶️ Next Stage" if ai_stage_idx < len(_AI_CAREER_STAGES) - 1 else "🏁 Retire & See Legacy"
+            if st.button(next_label, key="ai_next_stage"):
+                # Apply stats
+                for k, v in delta.items():
+                    st.session_state.ai_stats[k] += v
+                # Save history
+                st.session_state.ai_history.append({
+                    "stage":   stage["name"],
+                    "choice":  choice_text,
+                    "outcome": st.session_state.ai_outcome_text,
+                    "delta":   delta,
+                })
+                # Advance
+                st.session_state.ai_stage_idx       += 1
+                st.session_state.ai_awaiting_outcome  = False
+                st.session_state.ai_chosen_option     = None
+                st.session_state.ai_narrative         = ""
+                st.session_state.ai_choices           = []
+                st.session_state.ai_outcome_text      = ""
+                st.rerun()
+
+        # ── Showing choices (awaiting decision) ───────────────────────────────
+        else:
+            st.markdown("### 🤔 What do you do?")
+            choices = st.session_state.ai_choices
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button(f"**A:** {choices[0][0]}", key="ai_choice_a", use_container_width=True):
+                    st.session_state.ai_chosen_option    = 0
+                    st.session_state.ai_awaiting_outcome = True
+                    st.rerun()
+            with col_b:
+                if st.button(f"**B:** {choices[1][0]}", key="ai_choice_b", use_container_width=True):
+                    st.session_state.ai_chosen_option    = 1
+                    st.session_state.ai_awaiting_outcome = True
+                    st.rerun()
+
+    # ── Career ended — legacy screen ──────────────────────────────────────────
+    elif ai_stage_idx >= len(_AI_CAREER_STAGES):
+        player = st.session_state.ai_player
+        stats  = st.session_state.ai_stats
+        rating, badge = _career_rating(stats)
+        flag   = FLAGS.get(player["nationality"], "🌍")
+
+        st.markdown(f"## 🏁 {player['name']} — Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{flag} {player['nationality']} · {player['position_group']} · {player['style']}**")
+
+        # Final stats
+        s1, s2, s3, s4 = st.columns(4)
+        with s1: st.metric("⚽ Career Goals",    stats["goals"])
+        with s2: st.metric("🎯 Career Assists",   stats["assists"])
+        with s3: st.metric("🏆 Trophies Won",     stats["trophies"])
+        with s4: st.metric("🌍 International Caps", stats["caps"])
+
+        st.markdown("---")
+        st.markdown("### 📖 Career Chronicle")
+        for entry in st.session_state.ai_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #1db954;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#1db954">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Chose: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if st.button("🔄 Start a New Career", key="ai_restart"):
+            st.session_state.ai_player           = None
+            st.session_state.ai_stage_idx        = -1
+            st.session_state.ai_awaiting_outcome = False
+            st.session_state.ai_chosen_option    = None
+            st.session_state.ai_narrative        = ""
+            st.session_state.ai_choices          = []
+            st.session_state.ai_outcome_text     = ""
+            st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
+            st.session_state.ai_history          = []
+            st.rerun()
+
