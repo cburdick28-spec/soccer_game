@@ -273,6 +273,27 @@ DEFAULTS = {
     "coach_stats":         {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0},
     "coach_history":       [],
     "coach_prefill":       None,   # {name, nationality} pre-filled from player sim transition
+    # NFL Player Sim
+    "nfl_player":           None,   # {name, position_group, style}
+    "nfl_stage_idx":        -1,     # -1=not started, 0-7=stage, 8=ended
+    "nfl_awaiting_outcome": False,
+    "nfl_chosen_option":    None,
+    "nfl_narrative":        "",
+    "nfl_choices":          [],
+    "nfl_outcome_text":     "",
+    "nfl_stats":            {"touchdowns": 0, "yards": 0, "pro_bowls": 0, "super_bowls": 0},
+    "nfl_history":          [],
+    # NFL Coach Sim
+    "nfl_coach_manager":       None,   # {name, philosophy}
+    "nfl_coach_stage_idx":     -1,
+    "nfl_coach_awaiting_outcome": False,
+    "nfl_coach_chosen_option": None,
+    "nfl_coach_narrative":     "",
+    "nfl_coach_choices":       [],
+    "nfl_coach_outcome_text":  "",
+    "nfl_coach_stats":         {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0},
+    "nfl_coach_history":       [],
+    "nfl_coach_prefill":       None,   # {name} pre-filled from NFL player sim transition
 }
 
 for k, v in DEFAULTS.items():
@@ -571,7 +592,7 @@ st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Gu
 st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 8 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf, tab_coach = st.tabs([
+tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf, tab_coach, tab_nfl_player, tab_nfl_coach = st.tabs([
     "🏟️ Career Timeline",
     "🟩 Footballer Guesser",
     "🏆 Trophy Cabinet",
@@ -580,6 +601,8 @@ tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf, tab_coach = s
     "🤖 AI Career Sim",
     "⚔️ Beat the Footballer",
     "🧑‍💼 Coach Career Sim",
+    "🏈 NFL Player Sim",
+    "🏈 NFL Head Coach",
 ])
 
 # ─────────────────── helpers ──────────────────────────────────────────────────
@@ -2633,3 +2656,1066 @@ with tab_btf:
                     )
                     st.rerun()
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NFL PLAYER SIM — constants, helpers, tab rendering
+# ══════════════════════════════════════════════════════════════════════════════
+
+_NFL_PLAYING_STYLES = [
+    "Scrambling Dual-Threat",
+    "Elite Pocket Passer",
+    "Explosive Speed Back",
+    "Power Runner",
+    "Route Runner",
+    "Deep Threat",
+    "Pass Rusher",
+    "Coverage Specialist",
+    "Run Stopper",
+    "Red Zone Target",
+]
+
+_NFL_POSITION_GROUPS = ["Quarterback", "Running Back", "Wide Receiver", "Defender"]
+
+_NFL_CAREER_STAGES = [
+    {"idx": 0, "id": "high_school", "name": "High School Star",       "age": "16–18", "icon": "🌱"},
+    {"idx": 1, "id": "college",     "name": "College Career",          "age": "18–22", "icon": "🎓"},
+    {"idx": 2, "id": "nfl_draft",   "name": "NFL Draft & Rookie Year", "age": "22–23", "icon": "⚡"},
+    {"idx": 3, "id": "rising",      "name": "Rising Star",             "age": "23–25", "icon": "📈"},
+    {"idx": 4, "id": "breakout",    "name": "Breakout Season",         "age": "25–27", "icon": "💥"},
+    {"idx": 5, "id": "peak",        "name": "Peak Years",              "age": "27–30", "icon": "🏆"},
+    {"idx": 6, "id": "veteran",     "name": "Veteran Phase",           "age": "30–34", "icon": "👑"},
+    {"idx": 7, "id": "final",       "name": "Final Chapter",           "age": "34–38", "icon": "🏁"},
+]
+
+
+def _nfl_stage_data(position_group: str) -> list:
+    """Return list of (narrative, choice_a, choice_b) tuples for 8 NFL career stages."""
+    if position_group == "Quarterback":
+        return [
+            # 0 – High School Star (16-18)
+            (
+                "{name} lit up the Friday night lights as a {style}, breaking every state passing record in sight. "
+                "College recruiters were lining up before junior year was over.",
+                ("Commit early to a powerhouse program to compete for a national title",
+                 {"touchdowns": 30, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+                ("Choose a program where you'll be the undisputed starter from day one",
+                 {"touchdowns": 48, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 1 – College Career (18-22)
+            (
+                "College scouts quickly confirmed what high school rivals already knew — {name} was special. "
+                "A {style} who could read defences like a chess grandmaster, the Heisman conversation started in sophomore year.",
+                ("Chase the national championship and build a trophy-laden college resume",
+                 {"touchdowns": 64, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
+                ("Declare early for the Draft after a record-breaking junior season",
+                 {"touchdowns": 48, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 2 – NFL Draft & Rookie Year (22-23)
+            (
+                "Draft night arrived and {name}'s name echoed through the arena. Every training camp rep confirmed "
+                "this was a future franchise cornerstone, but the NFL learning curve is steep.",
+                ("Start immediately — embrace the sink-or-swim challenge as the Week 1 starter",
+                 {"touchdowns": 28, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+                ("Learn from a veteran QB for a season before taking the starting job",
+                 {"touchdowns": 18, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 3 – Rising Star (23-25)
+            (
+                "The league was on notice. {name}'s ability to extend plays and dissect zone coverages made every "
+                "defensive coordinator lose sleep on Saturday nights.",
+                ("Sign a prove-it contract extension and silence the doubters in a playoff push",
+                 {"touchdowns": 62, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
+                ("Request a trade to a contender with a stronger supporting cast",
+                 {"touchdowns": 55, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
+            ),
+            # 4 – Breakout Season (25-27)
+            (
+                "The breakout campaign was historic. {name} led the league in passer rating, threw for 40-plus touchdowns, "
+                "and finally silenced every remaining sceptic. Two massive paths lay ahead.",
+                ("Lead the franchise deep into the playoffs — a Super Bowl run begins now",
+                 {"touchdowns": 70, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
+                ("Sign a record-breaking contract extension and become the face of the league",
+                 {"touchdowns": 65, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
+            ),
+            # 5 – Peak Years (27-30)
+            (
+                "At 27, {name} was operating at the very pinnacle of the position. MVPs were discussed annually, "
+                "and every deep playoff run seemed destined to end with a Lombardi Trophy.",
+                ("Win back-to-back Super Bowls and cement an all-time legacy",
+                 {"touchdowns": 90, "yards": 13, "pro_bowls": 3, "super_bowls": 2}),
+                ("Sacrifice individual stats to run a system that maximises team wins",
+                 {"touchdowns": 72, "yards": 11, "pro_bowls": 2, "super_bowls": 1}),
+            ),
+            # 6 – Veteran Phase (30-34)
+            (
+                "30 and still commanding, {name} led every film session and owned every two-minute drill. "
+                "Experience now compensated for the half-step of athleticism time had taken.",
+                ("Chase one final ring with a legitimate Super Bowl contender",
+                 {"touchdowns": 68, "yards": 9, "pro_bowls": 2, "super_bowls": 1}),
+                ("Stay with the beloved franchise and mentor the next generation of signal-callers",
+                 {"touchdowns": 58, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
+            ),
+            # 7 – Final Chapter (34-38)
+            (
+                "Father Time waits for no quarterback, but {name} had rewritten what was possible. "
+                "One final act remained to be written before the cleats came off.",
+                ("Return to the franchise where it all started for an emotional farewell season",
+                 {"touchdowns": 35, "yards": 5, "pro_bowls": 1, "super_bowls": 0}),
+                ("Join a contender as a savvy veteran and push for a storybook championship exit",
+                 {"touchdowns": 42, "yards": 6, "pro_bowls": 1, "super_bowls": 1}),
+            ),
+        ]
+    elif position_group == "Running Back":
+        return [
+            # 0 – High School Star (16-18)
+            (
+                "Friday nights belonged to {name}. A {style} who made varsity defenders look like they were "
+                "standing still, the offers flooded in before sophomore year ended.",
+                ("Commit to the top recruiting class and chase a national title",
+                 {"touchdowns": 40, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
+                ("Choose the program that promises immediate carries and full feature-back usage",
+                 {"touchdowns": 55, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 1 – College Career (18-22)
+            (
+                "The Heisman was handed over in a landslide. {name}'s combination of vision, burst, and physicality "
+                "made college defenders look like helpless cones on a practice field.",
+                ("Stay all four years, become a program legend, and perfect the craft",
+                 {"touchdowns": 72, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
+                ("Declare after three seasons while at the absolute peak of college form",
+                 {"touchdowns": 56, "yards": 8, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 2 – NFL Draft & Rookie Year (22-23)
+            (
+                "Selected in the first round, {name} arrived to an expectant fanbase ready to transform "
+                "the ground game. The NFL grind was real, but the talent was undeniable.",
+                ("Take the starting role from Week 1 and earn Offensive Rookie of the Year",
+                 {"touchdowns": 18, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+                ("Ease into a committee backfield and absorb the pro game for a season",
+                 {"touchdowns": 10, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 3 – Rising Star (23-25)
+            (
+                "{name} was racking up 1,500-yard seasons and making the Pro Bowl feel like a formality. "
+                "The league was witnessing a generational back in full flight.",
+                ("Demand a feature-back workload and chase a 2,000-yard season",
+                 {"touchdowns": 44, "yards": 9, "pro_bowls": 2, "super_bowls": 0}),
+                ("Stay versatile — pass-catching duties added a new lethal dimension",
+                 {"touchdowns": 36, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
+            ),
+            # 4 – Breakout Season (25-27)
+            (
+                "The breakout campaign had stat lines that felt fictional. {name} rushed for over 2,000 yards, "
+                "scored 20-plus touchdowns, and was the undisputed best player on the planet.",
+                ("Capitalise on the monster year with a record-setting running back contract",
+                 {"touchdowns": 50, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
+                ("Join a powerhouse offence as the final piece to push for a Super Bowl",
+                 {"touchdowns": 42, "yards": 8, "pro_bowls": 2, "super_bowls": 1}),
+            ),
+            # 5 – Peak Years (27-30)
+            (
+                "At 27, {name} was at the intersection of peak athleticism and veteran savvy. "
+                "Every carry was a masterclass in patience, power, and instinct.",
+                ("Lead the franchise to a Super Bowl and etch the name in Canton stone",
+                 {"touchdowns": 52, "yards": 9, "pro_bowls": 3, "super_bowls": 1}),
+                ("Chase a second massive contract while running backs' windows remain open",
+                 {"touchdowns": 48, "yards": 8, "pro_bowls": 2, "super_bowls": 0}),
+            ),
+            # 6 – Veteran Phase (30-34)
+            (
+                "30 is ancient for running backs, but {name} defied every rule. A reduced but explosive workload "
+                "kept the defence honest and the highlights coming.",
+                ("Pivot to a committee role that prolongs the career and chases rings",
+                 {"touchdowns": 28, "yards": 5, "pro_bowls": 1, "super_bowls": 1}),
+                ("Sign a one-year prove-it deal and chase a final Pro Bowl appearance",
+                 {"touchdowns": 24, "yards": 4, "pro_bowls": 1, "super_bowls": 0}),
+            ),
+            # 7 – Final Chapter (34-38)
+            (
+                "Few running backs reached 34 still contributing at an elite level. {name} was the exception "
+                "that proved every rule — and the story deserved a worthy final chapter.",
+                ("Return to the team that drafted you for a sentimental farewell season",
+                 {"touchdowns": 14, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+                ("Sign with a Super Bowl favourite as a veteran change-of-pace back for one last ring",
+                 {"touchdowns": 16, "yards": 3, "pro_bowls": 0, "super_bowls": 1}),
+            ),
+        ]
+    elif position_group == "Wide Receiver":
+        return [
+            # 0 – High School Star (16-18)
+            (
+                "The combination of {name}'s {style} route-running and sideline-threatening speed made "
+                "college coaches drive hundreds of miles just to watch a practice.",
+                ("Commit to a pass-heavy Air Raid programme to maximise receiving stats",
+                 {"touchdowns": 38, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
+                ("Choose a storied program with NFL pipeline pedigree to sharpen every skill",
+                 {"touchdowns": 28, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 1 – College Career (18-22)
+            (
+                "{name}'s route tree read like a doctoral thesis on deception. By junior year the name was "
+                "synonymous with uncoverable, and mock drafts were debating top-five or top-ten.",
+                ("Stack the Biletnikoff Award on the resume with a record-breaking senior season",
+                 {"touchdowns": 66, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
+                ("Declare early and begin turning elite college tape into an NFL contract",
+                 {"touchdowns": 50, "yards": 8, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 2 – NFL Draft & Rookie Year (22-23)
+            (
+                "Selected in the first round and handed a number jersey already selling merchandise, "
+                "{name} arrived to immediate expectations. The NFL cornerbacks were the sternest test yet.",
+                ("Attack the starting role aggressively — WR1 from the jump",
+                 {"touchdowns": 12, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+                ("Build chemistry with the QB over a full season to develop a telepathic connection",
+                 {"touchdowns": 8, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 3 – Rising Star (23-25)
+            (
+                "1,200-yard seasons and double-digit touchdowns had become the baseline expectation. "
+                "{name} was making Pro Bowl appearances look like a formality.",
+                ("Demand WR1 usage and a top-of-market extension at the position",
+                 {"touchdowns": 30, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
+                ("Accept a secondary role on a loaded contender to chase a Super Bowl early",
+                 {"touchdowns": 22, "yards": 6, "pro_bowls": 0, "super_bowls": 1}),
+            ),
+            # 4 – Breakout Season (25-27)
+            (
+                "The breakout year cemented the case for best receiver in football. {name} posted "
+                "a 100-catch, 1,600-yard, 14-touchdown campaign that left cornerbacks humbled.",
+                ("Sign a record-breaking wide receiver contract and raise the position's market",
+                 {"touchdowns": 36, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
+                ("Join an elite quarterback to build an all-time passing duo",
+                 {"touchdowns": 40, "yards": 10, "pro_bowls": 2, "super_bowls": 1}),
+            ),
+            # 5 – Peak Years (27-30)
+            (
+                "At 27, {name} owned every cornerback matchup on the planet. Route-running had become "
+                "an art form and the touchdowns were arriving in highlight packages every Sunday.",
+                ("Chase back-to-back Super Bowl rings as the top offensive weapon",
+                 {"touchdowns": 48, "yards": 12, "pro_bowls": 3, "super_bowls": 2}),
+                ("Win an offensive MVP and become the face of the highest-scoring offence in history",
+                 {"touchdowns": 54, "yards": 14, "pro_bowls": 3, "super_bowls": 0}),
+            ),
+            # 6 – Veteran Phase (30-34)
+            (
+                "30 and still separating at will, {name} had evolved from a speed merchant into "
+                "the most intelligent route runner in the game. Younger defenders were in a classroom.",
+                ("Mentor a rising receiver alongside regular starting duties",
+                 {"touchdowns": 30, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
+                ("Chase one final big contract while the production still justifies it",
+                 {"touchdowns": 26, "yards": 7, "pro_bowls": 1, "super_bowls": 0}),
+            ),
+            # 7 – Final Chapter (34-38)
+            (
+                "The journey that started under Friday night lights was nearing its final act. "
+                "{name}'s hands and savvy remained elite even as the recovery days got longer.",
+                ("Return to the franchise where the legacy was built for one last season",
+                 {"touchdowns": 14, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
+                ("Join a Super Bowl contender as a veteran leader for one storybook ring",
+                 {"touchdowns": 16, "yards": 4, "pro_bowls": 0, "super_bowls": 1}),
+            ),
+        ]
+    else:  # Defender
+        return [
+            # 0 – High School Star (16-18)
+            (
+                "{name} was a {style} nightmare for every opposing offence from the very first kick-off. "
+                "College recruiters called it the most dominant high-school defensive performance in a decade.",
+                ("Join a powerhouse programme known for producing NFL defensive talent",
+                 {"touchdowns": 5, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+                ("Choose a programme where you'll be the defensive centrepiece from day one",
+                 {"touchdowns": 8, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 1 – College Career (18-22)
+            (
+                "The Butkus and Bednarik Award committees were watching every snap. {name} was turning "
+                "college offences into a personal highlight reel — sacks, picks, and forced fumbles galore.",
+                ("Stay all four years to win the Butkus Award and complete a degree",
+                 {"touchdowns": 10, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+                ("Declare early with the highest defensive prospect grade in the class",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 2 – NFL Draft & Rookie Year (22-23)
+            (
+                "Drafted in the top ten, {name} arrived to a defence hungry for a difference-maker. "
+                "The learning curve was real — but the impact was immediate.",
+                ("Start immediately and earn Defensive Rookie of the Year",
+                 {"touchdowns": 4, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+                ("Come off the bench and absorb the complexity of the professional game for a season",
+                 {"touchdowns": 2, "yards": 0, "pro_bowls": 0, "super_bowls": 0}),
+            ),
+            # 3 – Rising Star (23-25)
+            (
+                "Quarterbacks were checking down before {name} could even get out of their stance. "
+                "The annual Pro Bowl invitations were becoming a formality.",
+                ("Anchor the defence as the defensive captain and chase a Defensive Player of the Year award",
+                 {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
+                ("Request a move to a defensive powerhouse scheme that maximises every strength",
+                 {"touchdowns": 8, "yards": 2, "pro_bowls": 1, "super_bowls": 0}),
+            ),
+            # 4 – Breakout Season (25-27)
+            (
+                "Defensive Player of the Year. The award was unanimous and deserved. "
+                "{name}'s season-long dominance had completely altered how the opposition game-planned.",
+                ("Win a Super Bowl as the anchor of the league's most feared defence",
+                 {"touchdowns": 12, "yards": 2, "pro_bowls": 2, "super_bowls": 1}),
+                ("Sign a record-breaking defensive contract and become the highest-paid player at the position",
+                 {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
+            ),
+            # 5 – Peak Years (27-30)
+            (
+                "At 27, {name} was the last piece any Super Bowl contender wanted to face. "
+                "Every play call began with a plan to account for the defensive nightmare on the field.",
+                ("Lead a dynasty defence to back-to-back championships",
+                 {"touchdowns": 14, "yards": 3, "pro_bowls": 3, "super_bowls": 2}),
+                ("Become the defensive cornerstone of a franchise rebuild and lift a long-suffering fanbase",
+                 {"touchdowns": 12, "yards": 2, "pro_bowls": 2, "super_bowls": 1}),
+            ),
+            # 6 – Veteran Phase (30-34)
+            (
+                "30 and still causing chaos on every play. {name}'s football IQ and film study had become "
+                "almost supernatural — anticipating plays before the snap.",
+                ("Pivot to a mentoring role while still starting and chasing one more ring",
+                 {"touchdowns": 8, "yards": 1, "pro_bowls": 1, "super_bowls": 1}),
+                ("Chase a final Defensive Player of the Year award to bookend an elite career",
+                 {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
+            ),
+            # 7 – Final Chapter (34-38)
+            (
+                "The career that had terrorised quarterbacks and running backs across two decades was "
+                "drawing to a close. {name}'s farewell would be written on the biggest stage possible.",
+                ("Return to the city where the legend was born for a final home-crowd goodbye",
+                 {"touchdowns": 4, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+                ("Sign with a Super Bowl contender and chase one last ring before hanging up the pads",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 1}),
+            ),
+        ]
+
+
+def _nfl_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> dict:
+    """Return {narrative, choices: [str, str], stat_deltas: [dict, dict]}."""
+    templates = _nfl_stage_data(player["position_group"])
+    tmpl_narr, tmpl_a, tmpl_b = templates[stage["idx"]]
+    fallback = {
+        "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
+        "choices":     [tmpl_a[0], tmpl_b[0]],
+        "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+    }
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stat_line = (
+            f"Career stats so far: {stats['touchdowns']} touchdowns, {stats['yards']}k yards, "
+            f"{stats['pro_bowls']} Pro Bowls, {stats['super_bowls']} Super Bowls."
+        ) if stats["touchdowns"] + stats["yards"] + stats["pro_bowls"] + stats["super_bowls"] > 0 else ""
+        prompt = (
+            f"Create a career stage for this NFL player:\\n"
+            f"Name: {player['name']} | Position: {player['position_group']} | Style: {player['style']}\\n"
+            f"Stage: {stage['name']} (Age {stage['age']})\\n"
+            f"{stat_line}\\n\\n"
+            f"Respond in EXACTLY this format (keep each section to 1-2 sentences):\\n"
+            f"NARRATIVE: [dramatic NFL career narrative for this stage]\\n"
+            f"CHOICE_A: [{tmpl_a[0]}]\\n"
+            f"CHOICE_B: [{tmpl_b[0]}]"
+        )
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NFL career narrator creating an engaging text-adventure game. "
+                    "Be concise, dramatic, and use authentic NFL details. "
+                    "Keep the two choices close to the template options provided."
+                )},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=220,
+            temperature=0.85,
+        )
+        lines = {}
+        for line in resp.choices[0].message.content.strip().splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                lines[k.strip()] = v.strip()
+        return {
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
+            "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+        }
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nfl_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
+    """Return outcome narrative string for an NFL career stage choice."""
+    parts = []
+    if delta.get("touchdowns"): parts.append(f"{delta['touchdowns']} touchdowns")
+    if delta.get("yards"):      parts.append(f"{delta['yards']}k yards")
+    if delta.get("pro_bowls"):  parts.append(f"{delta['pro_bowls']} Pro Bowl selections")
+    if delta.get("super_bowls"):parts.append(f"{delta['super_bowls']} Super Bowl rings")
+    stat_str = ", ".join(parts) if parts else "valuable experience"
+    fallback = (
+        f"A tremendous stretch for {player['name']}! "
+        f"The decision paid off with {stat_str} earned across this stage of the career."
+    )
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NFL career narrator. Write punchy, vivid outcome paragraphs."
+                )},
+                {"role": "user", "content": (
+                    f"{player['name']} (NFL {player['position_group']}) chose: \"{choice_text}\"\\n"
+                    f"Stage: {stage['name']}\\n"
+                    f"Results: {stat_str}\\n\\n"
+                    f"Write ONE paragraph (2-3 sentences) describing what happened. "
+                    f"Be specific and dramatic. Do NOT start with the player's name."
+                )},
+            ],
+            max_tokens=130,
+            temperature=0.85,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nfl_career_rating(stats: dict) -> tuple[int, str]:
+    """Return (0-100 rating, badge label) based on accumulated NFL career stats."""
+    score = (
+        stats["touchdowns"] * 1.5
+        + stats["yards"] * 2.0
+        + stats["pro_bowls"] * 30
+        + stats["super_bowls"] * 50
+    )
+    if score >= 700: return 99, "\U0001f410 All-Time NFL Legend"
+    if score >= 530: return 95, "\u2b50 Hall of Fame Lock"
+    if score >= 380: return 90, "\U0001f31f Elite Pro"
+    if score >= 260: return 83, "\U0001f4c8 Multiple Pro Bowler"
+    if score >= 160: return 75, "\u2705 Solid NFL Starter"
+    return 65, "\U0001f393 NFL Journeyman"
+
+
+# ── NFL Player Sim: tab rendering ─────────────────────────────────────────────
+with tab_nfl_player:
+    st.markdown("## \U0001f3c8 NFL Player Career Simulator")
+    st.markdown(
+        "Create your own NFL player and guide them from high school all the way to retirement. "
+        "Every decision shapes your legacy — touchdowns, yards, Pro Bowls, and Super Bowl rings."
+    )
+    if not st.session_state.openai_api_key:
+        st.info(
+            "\U0001f4a1 **Tip:** Enter your OpenAI API key in the sidebar to unlock AI-generated "
+            "personalised narratives. The simulator works great with built-in story templates too!"
+        )
+
+    nfl_stage_idx = st.session_state.nfl_stage_idx
+    nfl_player    = st.session_state.nfl_player
+
+    if nfl_stage_idx == -1:
+        st.markdown("### \U0001f3c8 Create Your NFL Player")
+        col_nf1, col_nf2 = st.columns(2)
+        with col_nf1:
+            nfl_name  = st.text_input("Player Name", placeholder="e.g. Marcus Rivers", key="nfl_name_input")
+            nfl_pos   = st.selectbox("Position Group", _NFL_POSITION_GROUPS, key="nfl_pos_input")
+        with col_nf2:
+            nfl_style = st.selectbox("Playing Style", _NFL_PLAYING_STYLES, key="nfl_style_input")
+
+        if st.button("\U0001f680 Start NFL Career", key="nfl_start"):
+            if not nfl_name.strip():
+                st.warning("Please enter a player name.")
+            else:
+                st.session_state.nfl_player = {
+                    "name":           nfl_name.strip(),
+                    "position_group": nfl_pos,
+                    "style":          nfl_style,
+                }
+                st.session_state.nfl_stage_idx        = 0
+                st.session_state.nfl_awaiting_outcome = False
+                st.session_state.nfl_chosen_option    = None
+                st.session_state.nfl_narrative        = ""
+                st.session_state.nfl_choices          = []
+                st.session_state.nfl_outcome_text     = ""
+                st.session_state.nfl_stats            = {"touchdowns": 0, "yards": 0, "pro_bowls": 0, "super_bowls": 0}
+                st.session_state.nfl_history          = []
+                st.rerun()
+
+    elif nfl_stage_idx < len(_NFL_CAREER_STAGES):
+        stage   = _NFL_CAREER_STAGES[nfl_stage_idx]
+        player  = st.session_state.nfl_player
+        stats   = st.session_state.nfl_stats
+        api_key = st.session_state.openai_api_key
+
+        st.markdown(f"### {stage['icon']} Stage {nfl_stage_idx + 1} / {len(_NFL_CAREER_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress(nfl_stage_idx / len(_NFL_CAREER_STAGES))
+
+        ns1, ns2, ns3, ns4 = st.columns(4)
+        with ns1: st.metric("\U0001f3c8 Touchdowns",   stats["touchdowns"])
+        with ns2: st.metric("\U0001f4cf Yards (000s)", stats["yards"])
+        with ns3: st.metric("\u2b50 Pro Bowls",        stats["pro_bowls"])
+        with ns4: st.metric("\U0001f48d Super Bowls",  stats["super_bowls"])
+
+        st.markdown("---")
+
+        if not st.session_state.nfl_narrative:
+            with st.spinner("\u270d\ufe0f Writing your NFL story\u2026"):
+                data = _nfl_generate_stage(player, stage, stats, api_key)
+            st.session_state.nfl_narrative = data["narrative"]
+            st.session_state.nfl_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.rerun()
+
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #005a8e;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.nfl_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+
+        if st.session_state.nfl_awaiting_outcome:
+            chosen_idx = st.session_state.nfl_chosen_option
+            choice_text, delta = st.session_state.nfl_choices[chosen_idx]
+
+            if not st.session_state.nfl_outcome_text:
+                with st.spinner("\u26a1 Simulating the outcome\u2026"):
+                    outcome = _nfl_generate_outcome(player, stage, choice_text, delta, api_key)
+                st.session_state.nfl_outcome_text = outcome
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(0,90,142,0.1);border-left:4px solid #ffc107;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.nfl_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            gain_parts = []
+            if delta.get("touchdowns"): gain_parts.append(f"\U0001f3c8 +{delta['touchdowns']} TDs")
+            if delta.get("yards"):      gain_parts.append(f"\U0001f4cf +{delta['yards']}k yards")
+            if delta.get("pro_bowls"):  gain_parts.append(f"\u2b50 +{delta['pro_bowls']} Pro Bowls")
+            if delta.get("super_bowls"):gain_parts.append(f"\U0001f48d +{delta['super_bowls']} Super Bowls")
+            if gain_parts:
+                st.markdown("**Stats earned:** " + "  \u00b7  ".join(gain_parts))
+
+            next_label = "\u25b6\ufe0f Next Stage" if nfl_stage_idx < len(_NFL_CAREER_STAGES) - 1 else "\U0001f3c1 Retire & See Legacy"
+            if st.button(next_label, key="nfl_next_stage"):
+                for k, v in delta.items():
+                    st.session_state.nfl_stats[k] += v
+                st.session_state.nfl_history.append({
+                    "stage":   stage["name"],
+                    "choice":  choice_text,
+                    "outcome": st.session_state.nfl_outcome_text,
+                    "delta":   delta,
+                })
+                st.session_state.nfl_stage_idx        += 1
+                st.session_state.nfl_awaiting_outcome  = False
+                st.session_state.nfl_chosen_option     = None
+                st.session_state.nfl_narrative         = ""
+                st.session_state.nfl_choices           = []
+                st.session_state.nfl_outcome_text      = ""
+                st.rerun()
+
+        else:
+            st.markdown("### \U0001f914 What do you do?")
+            choices = st.session_state.nfl_choices
+            col_na, col_nb = st.columns(2)
+            with col_na:
+                if st.button(f"**A:** {choices[0][0]}", key="nfl_choice_a", use_container_width=True):
+                    st.session_state.nfl_chosen_option    = 0
+                    st.session_state.nfl_awaiting_outcome = True
+                    st.rerun()
+            with col_nb:
+                if st.button(f"**B:** {choices[1][0]}", key="nfl_choice_b", use_container_width=True):
+                    st.session_state.nfl_chosen_option    = 1
+                    st.session_state.nfl_awaiting_outcome = True
+                    st.rerun()
+
+    elif nfl_stage_idx >= len(_NFL_CAREER_STAGES):
+        player = st.session_state.nfl_player
+        stats  = st.session_state.nfl_stats
+        rating, badge = _nfl_career_rating(stats)
+
+        st.markdown(f"## \U0001f3c1 {player['name']} \u2014 NFL Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem;background:linear-gradient(90deg,#003366,#005a8e);">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{player['position_group']} \u00b7 {player['style']}**")
+
+        n1, n2, n3, n4 = st.columns(4)
+        with n1: st.metric("\U0001f3c8 Career TDs",       stats["touchdowns"])
+        with n2: st.metric("\U0001f4cf Career Yards (k)", stats["yards"])
+        with n3: st.metric("\u2b50 Pro Bowls",             stats["pro_bowls"])
+        with n4: st.metric("\U0001f48d Super Bowls",       stats["super_bowls"])
+
+        st.markdown("---")
+        st.markdown("### \U0001f4d6 NFL Career Chronicle")
+        for entry in st.session_state.nfl_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #005a8e;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#4da6d9">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Chose: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("\U0001f504 Start a New NFL Career", key="nfl_restart"):
+                st.session_state.nfl_player           = None
+                st.session_state.nfl_stage_idx        = -1
+                st.session_state.nfl_awaiting_outcome = False
+                st.session_state.nfl_chosen_option    = None
+                st.session_state.nfl_narrative        = ""
+                st.session_state.nfl_choices          = []
+                st.session_state.nfl_outcome_text     = ""
+                st.session_state.nfl_stats            = {"touchdowns": 0, "yards": 0, "pro_bowls": 0, "super_bowls": 0}
+                st.session_state.nfl_history          = []
+                st.rerun()
+        with btn_col2:
+            if st.button("\U0001f9d1\u200d\U0001f4bc Continue as NFL Head Coach", key="nfl_to_coach"):
+                st.session_state.nfl_coach_prefill          = {"name": player["name"]}
+                st.session_state.nfl_coach_manager          = None
+                st.session_state.nfl_coach_stage_idx        = -1
+                st.session_state.nfl_coach_awaiting_outcome = False
+                st.session_state.nfl_coach_chosen_option    = None
+                st.session_state.nfl_coach_narrative        = ""
+                st.session_state.nfl_coach_choices          = []
+                st.session_state.nfl_coach_outcome_text     = ""
+                st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
+                st.session_state.nfl_coach_history          = []
+                st.rerun()
+
+        if st.session_state.nfl_coach_prefill:
+            st.info("\U0001f9d1\u200d\U0001f4bc Your coaching career is ready! Head to the **NFL Head Coach** tab to begin your journey.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NFL COACH SIM — constants, helpers, tab rendering
+# ══════════════════════════════════════════════════════════════════════════════
+
+_NFL_COACH_PHILOSOPHIES = [
+    "West Coast Offense",
+    "Air Raid Spread",
+    "Smash-Mouth Run Game",
+    "4-3 Pass Rush Defence",
+    "3-4 Zone Blitz",
+    "Two-Minute Drill Specialist",
+    "Defensive Ball Control",
+    "Dynamic Spread Option",
+]
+
+_NFL_COACH_STAGES = [
+    {"idx": 0, "id": "position_coach", "name": "Position Coach",            "age": "28-33", "icon": "\U0001f331"},
+    {"idx": 1, "id": "coordinator",    "name": "Offensive/Defensive Coord.", "age": "33-38", "icon": "\U0001f4cb"},
+    {"idx": 2, "id": "first_hc",       "name": "First Head Coach Role",      "age": "38-42", "icon": "\u26a1"},
+    {"idx": 3, "id": "rebuilding",     "name": "Rebuilding a Franchise",     "age": "42-46", "icon": "\U0001f4c8"},
+    {"idx": 4, "id": "playoffs",       "name": "Playoff Contender",          "age": "46-50", "icon": "\U0001f4a5"},
+    {"idx": 5, "id": "super_bowl_run", "name": "Super Bowl Run",             "age": "50-54", "icon": "\U0001f3c6"},
+    {"idx": 6, "id": "dynasty",        "name": "Dynasty Builder",            "age": "54-58", "icon": "\U0001f451"},
+    {"idx": 7, "id": "legacy",         "name": "Legacy Chapter",             "age": "58+",   "icon": "\U0001f3c1"},
+]
+
+
+def _nfl_coach_stage_data(philosophy: str) -> list:
+    """Return list of (narrative, choice_a, choice_b) tuples for 8 NFL coaching stages."""
+    return [
+        # 0 – Position Coach (28-33)
+        (
+            "After retiring, {name} took a quality-control position and quickly impressed the staff with "
+            "a deep understanding of the game. The {philosophy} philosophy began taking shape on the whiteboard.",
+            ("Coach the skill positions and build a reputation developing young talent",
+             {"wins": 0, "super_bowls": 0, "players_developed": 8, "reputation": 8}),
+            ("Focus on special teams coordination to get a full-unit coaching role immediately",
+             {"wins": 0, "super_bowls": 0, "players_developed": 3, "reputation": 12}),
+        ),
+        # 1 – Coordinator (33-38)
+        (
+            "The head coach noticed the brilliance on the practice field and in the film room. "
+            "{name} was promoted to coordinator — the real proving ground for future head coaches.",
+            ("Accept an offensive coordinator role at a high-profile franchise with a star quarterback",
+             {"wins": 35, "super_bowls": 0, "players_developed": 6, "reputation": 20}),
+            ("Take a defensive coordinator role with full scheme authority at an ambitious team",
+             {"wins": 28, "super_bowls": 0, "players_developed": 8, "reputation": 22}),
+        ),
+        # 2 – First Head Coach Role (38-42)
+        (
+            "The call came on a Tuesday morning in January. {name} was a head coach in the National Football League. "
+            "The {philosophy} system was installed from the first OTA — but building a winning culture takes time.",
+            ("Install the system boldly and demand immediate buy-in from veterans",
+             {"wins": 30, "super_bowls": 0, "players_developed": 5, "reputation": 24}),
+            ("Build trust through the locker room first, then gradually impose the full philosophy",
+             {"wins": 26, "super_bowls": 0, "players_developed": 10, "reputation": 28}),
+        ),
+        # 3 – Rebuilding a Franchise (42-46)
+        (
+            "A struggling franchise came calling with a mandate to rebuild from the ground up. "
+            "{name} took the challenge — turning a losing culture around is the ultimate test of any head coach.",
+            ("Go all-in on the NFL Draft and develop homegrown stars over a three-year plan",
+             {"wins": 32, "super_bowls": 0, "players_developed": 14, "reputation": 30}),
+            ("Use free agency aggressively to fast-track the rebuild and reach the playoffs",
+             {"wins": 42, "super_bowls": 0, "players_developed": 5, "reputation": 34}),
+        ),
+        # 4 – Playoff Contender (46-50)
+        (
+            "The rebuild was complete. {name}'s roster was now playoff-calibre, and the fanbase "
+            "was buzzing with Super Bowl energy for the first time in years.",
+            ("Make a deep playoff run — win the division and host a postseason game",
+             {"wins": 50, "super_bowls": 0, "players_developed": 8, "reputation": 38}),
+            ("Target the AFC/NFC championship with an aggressive in-season trade",
+             {"wins": 44, "super_bowls": 0, "players_developed": 5, "reputation": 44}),
+        ),
+        # 5 – Super Bowl Run (50-54)
+        (
+            "A Super Bowl contender at last. {name}'s {philosophy} system was operating at full efficiency, "
+            "and the squad had the firepower to go all the way.",
+            ("Win the Super Bowl and cement a place among the coaching greats",
+             {"wins": 52, "super_bowls": 1, "players_developed": 6, "reputation": 52}),
+            ("Build the infrastructure for sustained excellence — roster depth over one-season glory",
+             {"wins": 44, "super_bowls": 0, "players_developed": 10, "reputation": 48}),
+        ),
+        # 6 – Dynasty Builder (54-58)
+        (
+            "Back-to-back Super Bowl windows opened as {name} had assembled a dynasty-level roster. "
+            "Only the greatest coaches in NFL history had achieved what was now within reach.",
+            ("Win consecutive Super Bowls and become the face of the modern NFL",
+             {"wins": 60, "super_bowls": 2, "players_developed": 8, "reputation": 60}),
+            ("Prioritise developing the next generation of stars alongside continuing to win",
+             {"wins": 48, "super_bowls": 1, "players_developed": 18, "reputation": 55}),
+        ),
+        # 7 – Legacy Chapter (58+)
+        (
+            "At 58, {name}'s legacy was already etched into NFL history. "
+            "But one final chapter remained — a chance to be remembered as the greatest coach of all time.",
+            ("Return to a beloved former team for an emotional reunion and a final championship push",
+             {"wins": 30, "super_bowls": 1, "players_developed": 10, "reputation": 45}),
+            ("Take over a first-time Super Bowl contender and deliver the ultimate storybook ending",
+             {"wins": 40, "super_bowls": 2, "players_developed": 12, "reputation": 55}),
+        ),
+    ]
+
+
+def _nfl_coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: str) -> dict:
+    """Return {narrative, choices: [str, str], stat_deltas: [dict, dict]}."""
+    templates = _nfl_coach_stage_data(manager["philosophy"])
+    tmpl_narr, tmpl_a, tmpl_b = templates[stage["idx"]]
+    fallback = {
+        "narrative":   tmpl_narr.format(name=manager["name"], philosophy=manager["philosophy"]),
+        "choices":     [tmpl_a[0], tmpl_b[0]],
+        "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+    }
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        stat_line = (
+            f"Career stats so far: {stats['wins']} wins, {stats['super_bowls']} Super Bowls, "
+            f"{stats['players_developed']} players developed, {stats['reputation']} reputation points."
+        ) if any(stats.values()) else ""
+        prompt = (
+            f"Create an NFL coaching career stage for this head coach:\\n"
+            f"Name: {manager['name']} | Philosophy: {manager['philosophy']}\\n"
+            f"Stage: {stage['name']} (Age {stage['age']})\\n"
+            f"{stat_line}\\n\\n"
+            f"Respond in EXACTLY this format (keep each section to 1-2 sentences):\\n"
+            f"NARRATIVE: [dramatic NFL coaching career narrative for this stage]\\n"
+            f"CHOICE_A: [{tmpl_a[0]}]\\n"
+            f"CHOICE_B: [{tmpl_b[0]}]"
+        )
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NFL coaching career narrator creating an engaging text-adventure game. "
+                    "Be concise, dramatic, and use authentic NFL coaching details. "
+                    "Keep the two choices close to the template options provided."
+                )},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=220,
+            temperature=0.85,
+        )
+        lines = {}
+        for line in resp.choices[0].message.content.strip().splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                lines[k.strip()] = v.strip()
+        return {
+            "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
+            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0]],
+            "stat_deltas": [tmpl_a[1], tmpl_b[1]],
+        }
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nfl_coach_generate_outcome(manager: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
+    """Return outcome narrative string for an NFL coaching stage choice."""
+    parts = []
+    if delta.get("wins"):              parts.append(f"{delta['wins']} wins")
+    if delta.get("super_bowls"):       parts.append(f"{delta['super_bowls']} Super Bowl(s)")
+    if delta.get("players_developed"): parts.append(f"{delta['players_developed']} players developed")
+    if delta.get("reputation"):        parts.append(f"{delta['reputation']} reputation points")
+    stat_str = ", ".join(parts) if parts else "invaluable experience"
+    fallback = (
+        f"A superb spell of coaching for {manager['name']}! "
+        f"The decision paid off with {stat_str} earned across this stage of the career."
+    )
+    if not api_key:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        resp = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are an NFL coaching career narrator. Write punchy, vivid outcome paragraphs."
+                )},
+                {"role": "user", "content": (
+                    f"{manager['name']} (NFL head coach, {manager['philosophy']}) "
+                    f"chose: \"{choice_text}\"\\n"
+                    f"Stage: {stage['name']}\\n"
+                    f"Results: {stat_str}\\n\\n"
+                    f"Write ONE paragraph (2-3 sentences) describing what happened. "
+                    f"Be specific and dramatic. Do NOT start with the coach's name."
+                )},
+            ],
+            max_tokens=130,
+            temperature=0.85,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as exc:
+        import openai as _oai
+        if not isinstance(exc, _oai.OpenAIError):
+            raise
+        return fallback
+
+
+def _nfl_coach_career_rating(stats: dict) -> tuple[int, str]:
+    """Return (0-100 rating, badge label) based on accumulated NFL coaching stats."""
+    score = (
+        stats["wins"] * 0.7
+        + stats["super_bowls"] * 80
+        + stats["players_developed"] * 3
+        + stats["reputation"] * 1.5
+    )
+    if score >= 900: return 99, "\U0001f410 Greatest NFL Coach of All Time"
+    if score >= 700: return 95, "\u2b50 Hall of Fame Coach"
+    if score >= 500: return 90, "\U0001f31f Dynasty Architect"
+    if score >= 350: return 83, "\U0001f4c8 Accomplished Head Coach"
+    if score >= 220: return 74, "\u2705 Respected NFL Coach"
+    return 62, "\U0001f393 Journeyman Head Coach"
+
+
+# ── NFL Coach Sim: tab rendering ──────────────────────────────────────────────
+with tab_nfl_coach:
+    st.markdown("## \U0001f3c8 NFL Head Coach Career Simulator")
+    st.markdown(
+        "Build your NFL coaching career from a quality-control assistant all the way to Super Bowl glory. "
+        "Every decision shapes your legacy — wins, Super Bowls, players developed, and reputation."
+    )
+    if not st.session_state.openai_api_key:
+        st.info(
+            "\U0001f4a1 **Tip:** Enter your OpenAI API key in the sidebar to unlock AI-generated "
+            "personalised narratives. The simulator works great with built-in story templates too!"
+        )
+
+    nfl_coach_stage_idx = st.session_state.nfl_coach_stage_idx
+    nfl_coach_manager   = st.session_state.nfl_coach_manager
+    nfl_coach_prefill   = st.session_state.nfl_coach_prefill
+
+    if nfl_coach_stage_idx == -1:
+        if nfl_coach_prefill:
+            st.success(
+                f"\U0001f389 Welcome to the NFL sideline, **{nfl_coach_prefill['name']}**! "
+                f"Your playing days are over — now it's time to shape the game from the coach's box. "
+                f"Choose your philosophy to begin."
+            )
+
+        st.markdown("### \U0001f4cb Create Your NFL Head Coach")
+        col_nc1, col_nc2 = st.columns(2)
+        with col_nc1:
+            _default_nfl_name = nfl_coach_prefill["name"] if nfl_coach_prefill else ""
+            nfl_coach_name = st.text_input(
+                "Coach Name", value=_default_nfl_name,
+                placeholder="e.g. Alex Donovan", key="nfl_coach_name_input"
+            )
+        with col_nc2:
+            nfl_coach_philosophy = st.selectbox(
+                "Coaching Philosophy", _NFL_COACH_PHILOSOPHIES, key="nfl_coach_phil_input"
+            )
+
+        if st.button("\U0001f680 Start NFL Coaching Career", key="nfl_coach_start"):
+            if not nfl_coach_name.strip():
+                st.warning("Please enter a coach name.")
+            else:
+                st.session_state.nfl_coach_manager = {
+                    "name":       nfl_coach_name.strip(),
+                    "philosophy": nfl_coach_philosophy,
+                }
+                st.session_state.nfl_coach_prefill          = None
+                st.session_state.nfl_coach_stage_idx        = 0
+                st.session_state.nfl_coach_awaiting_outcome = False
+                st.session_state.nfl_coach_chosen_option    = None
+                st.session_state.nfl_coach_narrative        = ""
+                st.session_state.nfl_coach_choices          = []
+                st.session_state.nfl_coach_outcome_text     = ""
+                st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
+                st.session_state.nfl_coach_history          = []
+                st.rerun()
+
+    elif nfl_coach_stage_idx < len(_NFL_COACH_STAGES):
+        stage   = _NFL_COACH_STAGES[nfl_coach_stage_idx]
+        manager = st.session_state.nfl_coach_manager
+        stats   = st.session_state.nfl_coach_stats
+        api_key = st.session_state.openai_api_key
+
+        st.markdown(f"### {stage['icon']} Stage {nfl_coach_stage_idx + 1} / {len(_NFL_COACH_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress(nfl_coach_stage_idx / len(_NFL_COACH_STAGES))
+
+        ncs1, ncs2, ncs3, ncs4 = st.columns(4)
+        with ncs1: st.metric("\U0001f3c5 Wins",             stats["wins"])
+        with ncs2: st.metric("\U0001f48d Super Bowls",      stats["super_bowls"])
+        with ncs3: st.metric("\U0001f331 Players Developed", stats["players_developed"])
+        with ncs4: st.metric("\u2b50 Reputation",            stats["reputation"])
+
+        st.markdown("---")
+
+        if not st.session_state.nfl_coach_narrative:
+            with st.spinner("\u270d\ufe0f Writing your NFL coaching story\u2026"):
+                data = _nfl_coach_generate_stage(manager, stage, stats, api_key)
+            st.session_state.nfl_coach_narrative = data["narrative"]
+            st.session_state.nfl_coach_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.rerun()
+
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #c8102e;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.nfl_coach_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+
+        if st.session_state.nfl_coach_awaiting_outcome:
+            chosen_idx = st.session_state.nfl_coach_chosen_option
+            choice_text, delta = st.session_state.nfl_coach_choices[chosen_idx]
+
+            if not st.session_state.nfl_coach_outcome_text:
+                with st.spinner("\u26a1 Simulating the outcome\u2026"):
+                    outcome = _nfl_coach_generate_outcome(manager, stage, choice_text, delta, api_key)
+                st.session_state.nfl_coach_outcome_text = outcome
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(200,16,46,0.1);border-left:4px solid #ffc107;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.nfl_coach_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            gain_parts = []
+            if delta.get("wins"):              gain_parts.append(f"\U0001f3c5 +{delta['wins']} wins")
+            if delta.get("super_bowls"):       gain_parts.append(f"\U0001f48d +{delta['super_bowls']} Super Bowls")
+            if delta.get("players_developed"): gain_parts.append(f"\U0001f331 +{delta['players_developed']} players")
+            if delta.get("reputation"):        gain_parts.append(f"\u2b50 +{delta['reputation']} reputation")
+            if gain_parts:
+                st.markdown("**Stats earned:** " + "  \u00b7  ".join(gain_parts))
+
+            next_label = "\u25b6\ufe0f Next Stage" if nfl_coach_stage_idx < len(_NFL_COACH_STAGES) - 1 else "\U0001f3c1 Retire & See Legacy"
+            if st.button(next_label, key="nfl_coach_next_stage"):
+                for k, v in delta.items():
+                    st.session_state.nfl_coach_stats[k] += v
+                st.session_state.nfl_coach_history.append({
+                    "stage":   stage["name"],
+                    "choice":  choice_text,
+                    "outcome": st.session_state.nfl_coach_outcome_text,
+                    "delta":   delta,
+                })
+                st.session_state.nfl_coach_stage_idx        += 1
+                st.session_state.nfl_coach_awaiting_outcome  = False
+                st.session_state.nfl_coach_chosen_option     = None
+                st.session_state.nfl_coach_narrative         = ""
+                st.session_state.nfl_coach_choices           = []
+                st.session_state.nfl_coach_outcome_text      = ""
+                st.rerun()
+
+        else:
+            st.markdown("### \U0001f914 What do you do?")
+            choices = st.session_state.nfl_coach_choices
+            col_nca, col_ncb = st.columns(2)
+            with col_nca:
+                if st.button(f"**A:** {choices[0][0]}", key="nfl_coach_choice_a", use_container_width=True):
+                    st.session_state.nfl_coach_chosen_option    = 0
+                    st.session_state.nfl_coach_awaiting_outcome = True
+                    st.rerun()
+            with col_ncb:
+                if st.button(f"**B:** {choices[1][0]}", key="nfl_coach_choice_b", use_container_width=True):
+                    st.session_state.nfl_coach_chosen_option    = 1
+                    st.session_state.nfl_coach_awaiting_outcome = True
+                    st.rerun()
+
+    elif nfl_coach_stage_idx >= len(_NFL_COACH_STAGES):
+        manager = st.session_state.nfl_coach_manager
+        stats   = st.session_state.nfl_coach_stats
+        rating, badge = _nfl_coach_career_rating(stats)
+
+        st.markdown(f"## \U0001f3c1 {manager['name']} \u2014 NFL Coaching Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem;background:linear-gradient(90deg,#5a0010,#c8102e);">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{manager['philosophy']}**")
+
+        nr1, nr2, nr3, nr4 = st.columns(4)
+        with nr1: st.metric("\U0001f3c5 Career Wins",      stats["wins"])
+        with nr2: st.metric("\U0001f48d Super Bowls Won",  stats["super_bowls"])
+        with nr3: st.metric("\U0001f331 Players Developed", stats["players_developed"])
+        with nr4: st.metric("\u2b50 Total Reputation",      stats["reputation"])
+
+        st.markdown("---")
+        st.markdown("### \U0001f4d6 NFL Coaching Chronicle")
+        for entry in st.session_state.nfl_coach_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #c8102e;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#e05070">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Chose: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if st.button("\U0001f504 Start a New NFL Coaching Career", key="nfl_coach_restart"):
+            st.session_state.nfl_coach_manager          = None
+            st.session_state.nfl_coach_stage_idx        = -1
+            st.session_state.nfl_coach_awaiting_outcome = False
+            st.session_state.nfl_coach_chosen_option    = None
+            st.session_state.nfl_coach_narrative        = ""
+            st.session_state.nfl_coach_choices          = []
+            st.session_state.nfl_coach_outcome_text     = ""
+            st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
+            st.session_state.nfl_coach_history          = []
+            st.rerun()
