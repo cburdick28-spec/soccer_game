@@ -1,13 +1,12 @@
 """
 app.py  —  ⚽ Soccer Career Guesser  (Advanced Edition)
-Five game modes:
-  1. Trophy Cabinet – reveal trophies one-by-one and guess the footballer
-  2. Daily Challenge – same mystery player for everyone, seeded by today's date
-  3. Statistics & Achievements
-  4. AI Career Simulator – guide your own footballer from academy to retirement
-  5. Coach Career Sim – build a managerial career from grassroots to glory
-  6. NFL Player Sim – simulate an NFL player career
-  7. NFL Head Coach – simulate an NFL head coaching career
+Six game modes:
+  1. Daily Challenge – same mystery player for everyone, seeded by today's date
+  2. Statistics & Achievements
+  3. AI Career Simulator – guide your own footballer from academy to retirement
+  4. Coach Career Sim – build a managerial career from grassroots to glory
+  5. NFL Player Sim – simulate an NFL player career
+  6. NFL Head Coach – simulate an NFL head coaching career
 """
 
 import random
@@ -192,13 +191,6 @@ st.markdown("""
 # Session state helpers
 # ──────────────────────────────────────────────────────────────────────────────
 DEFAULTS = {
-    # Trophy Cabinet mode
-    "tc_player":           None,
-    "tc_revealed":         0,
-    "tc_guesses":          [],
-    "tc_won":              False,
-    "tc_gave_up":          False,
-    "tc_input_key":        200,
     # Daily Challenge
     "daily_date":          None,
     "daily_player":        None,
@@ -289,14 +281,6 @@ if st.session_state.daily_date != str(today):
     st.session_state.daily_score       = None
     st.session_state.daily_input_key  += 1
 
-def reset_tc(player):
-    st.session_state.tc_player    = player
-    st.session_state.tc_revealed  = 0
-    st.session_state.tc_guesses   = []
-    st.session_state.tc_won       = False
-    st.session_state.tc_gave_up   = False
-    st.session_state.tc_input_key += 1
-
 def get_filtered():
     return filter_players(
         position_group   = st.session_state.filter_position,
@@ -376,12 +360,6 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### 📖 How to Play")
-    with st.expander("Trophy Cabinet"):
-        st.markdown("""
-- Trophies revealed one by one  
-- Guess from the honours list  
-- 5 wrong guesses allowed  
-""")
     with st.expander("Daily Challenge"):
         st.markdown("""
 - Same mystery player every day  
@@ -410,8 +388,7 @@ st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Gu
 st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · AI-powered career &amp; coaching simulations</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_tc, tab_daily, tab_stats, tab_ai, tab_coach, tab_nfl_player, tab_nfl_coach = st.tabs([
-    "🏆 Trophy Cabinet",
+tab_daily, tab_stats, tab_ai, tab_coach, tab_nfl_player, tab_nfl_coach = st.tabs([
     "📅 Daily Challenge",
     "📊 Stats & Achievements",
     "🤖 AI Career Sim",
@@ -511,122 +488,6 @@ def render_player_profile(player: dict):
             st.markdown(f'<span class="trophy-chip">🏆 {t}</span>', unsafe_allow_html=True)
     with col_chart:
         render_career_chart(player)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — TROPHY CABINET
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_tc:
-    pool  = get_filtered()
-    tcp   = st.session_state.tc_player
-
-    col_btn3, _ = st.columns([1, 3])
-    with col_btn3:
-        if st.button("🎲 New Player", key="new_tc"):
-            if pool:
-                cand = pick_random_player(pool)
-                reset_tc(cand)
-            else:
-                st.warning("No players match the current filters.")
-
-    if tcp is None:
-        st.info("👈 Click **New Player** to start!")
-    else:
-
-        trophies    = tcp["trophies"]
-        tc_revealed = st.session_state.tc_revealed
-        tc_won      = st.session_state.tc_won
-        tc_gave_up  = st.session_state.tc_gave_up
-        tc_wrong    = [g for g in st.session_state.tc_guesses if g != tcp["name"]]
-        flag        = FLAGS.get(tcp["nationality"], "🌍")
-
-        # Metrics
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.metric("Trophies Revealed", f"{tc_revealed} / {len(trophies)}")
-        with c2:
-            tc_pts = score_for_guess(tc_revealed, len(trophies))
-            st.metric("Points if correct now", f"⭐ {tc_pts}")
-        with c3:
-            st.metric("Wrong Guesses", f"{len(tc_wrong)} / 5")
-
-        # Trophy cards
-        st.markdown("### 🏆 Trophy Cabinet")
-        show_tc = tc_revealed if not (tc_won or tc_gave_up) else len(trophies)
-        if show_tc == 0 and not (tc_won or tc_gave_up):
-            st.info("No trophies revealed yet. Click **Reveal Next Trophy** to start.")
-        else:
-            for t in trophies[:show_tc]:
-                st.markdown(f'<div class="trophy-card">🏆 {t}</div>', unsafe_allow_html=True)
-
-        if not tc_won and not tc_gave_up:
-            col_rev, _ = st.columns([1, 3])
-            with col_rev:
-                if tc_revealed < len(trophies):
-                    if st.button("🔍 Reveal Next Trophy", key="reveal_trophy"):
-                        st.session_state.tc_revealed += 1
-                        st.rerun()
-                else:
-                    st.warning("All trophies revealed! Take a guess.")
-
-            st.markdown("### 🤔 Your Guess")
-            tc_guess = st.selectbox(
-                "Type or select a player:",
-                options=[""] + all_player_names(),
-                key=f"tc_guess_{st.session_state.tc_input_key}",
-                label_visibility="collapsed",
-            )
-            col_tg, col_tgu = st.columns([1, 1])
-            with col_tg:
-                if st.button("✅ Submit Guess", key="submit_tc"):
-                    if not tc_guess:
-                        st.warning("Select a player first.")
-                    else:
-                        st.session_state.tc_guesses.append(tc_guess)
-                        if tc_guess == tcp["name"]:
-                            pts = score_for_guess(tc_revealed, len(trophies))
-                            st.session_state.total_score   += pts
-                            st.session_state.rounds_played += 1
-                            st.session_state.win_streak    += 1
-                            st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
-                            st.session_state.tc_won         = True
-                            st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": True, "points": pts})
-                            st.rerun()
-                        else:
-                            if len(tc_wrong) + 1 >= 5:
-                                st.session_state.tc_gave_up    = True
-                                st.session_state.rounds_played += 1
-                                st.session_state.win_streak     = 0
-                                st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": False, "points": 0})
-                                st.rerun()
-                            else:
-                                st.session_state.tc_input_key += 1
-                                st.rerun()
-            with col_tgu:
-                if st.button("🏳️ Give Up", key="giveup_tc"):
-                    st.session_state.tc_gave_up    = True
-                    st.session_state.rounds_played += 1
-                    st.session_state.win_streak     = 0
-                    st.session_state.history.append({"mode": "Trophy", "name": tcp["name"], "won": False, "points": 0})
-                    st.rerun()
-
-            if tc_wrong:
-                st.markdown("**❌ Wrong guesses:** " + " • ".join(tc_wrong))
-
-        if tc_won or tc_gave_up:
-            if tc_won:
-                pts = score_for_guess(tc_revealed, len(trophies))
-                st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{tcp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="result-wrong">😔 The answer was <b>{tcp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
-
-            st.markdown("### 🌟 Player Profile")
-            render_player_profile(tcp)
-
-            if st.button("▶️ Play Again", key="play_again_tc"):
-                pool = get_filtered()
-                if pool:
-                    reset_tc(pick_random_player(pool))
-                    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — DAILY CHALLENGE
@@ -871,7 +732,6 @@ with tab_stats:
     best_streak  = st.session_state.best_streak
     daily_streak = st.session_state.daily_streak
     wins_count   = sum(1 for h in st.session_state.history if h["won"])
-    trophy_wins  = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Trophy")
 
     achievements = [
         {"icon": "🎯", "name": "First Blood",       "desc": "Win your first round",       "unlocked": wins_count >= 1},
@@ -881,7 +741,6 @@ with tab_stats:
         {"icon": "⚡", "name": "Unstoppable",        "desc": "Reach a 10-win streak",      "unlocked": best_streak >= 10},
         {"icon": "⭐", "name": "Point Collector",    "desc": "Score 1,000 total points",   "unlocked": total_score >= 1000},
         {"icon": "🌟", "name": "High Scorer",        "desc": "Score 10,000 total points",  "unlocked": total_score >= 10000},
-        {"icon": "🏆", "name": "Trophy Hunter",      "desc": "Win 5 Trophy Cabinet rounds","unlocked": trophy_wins >= 5},
         {"icon": "📅", "name": "Daily Devotee",      "desc": "Get a 3-day daily streak",   "unlocked": daily_streak >= 3},
         {"icon": "📅", "name": "Daily Legend",       "desc": "Get a 7-day daily streak",   "unlocked": daily_streak >= 7},
     ]
