@@ -1,14 +1,13 @@
 """
 app.py  —  ⚽ Soccer Career Guesser  (Advanced Edition)
-Eight game modes:
-  1. Career Timeline  – reveal clubs one-by-one and guess the footballer
-  2. Footballer Guesser – Wordle-style 9-attribute feedback grid
-  3. Trophy Cabinet – reveal trophies one-by-one and guess the footballer
-  4. Daily Challenge – same mystery player for everyone, seeded by today's date
-  5. Statistics & Achievements
-  6. AI Career Simulator – guide your own footballer from academy to retirement
-  7. Beat the Footballer – face a star in a 5-question career trivia duel
-  8. Coach Career Sim – build a managerial career from grassroots to glory
+Five game modes:
+  1. Trophy Cabinet – reveal trophies one-by-one and guess the footballer
+  2. Daily Challenge – same mystery player for everyone, seeded by today's date
+  3. Statistics & Achievements
+  4. AI Career Simulator – guide your own footballer from academy to retirement
+  5. Coach Career Sim – build a managerial career from grassroots to glory
+  6. NFL Player Sim – simulate an NFL player career
+  7. NFL Head Coach – simulate an NFL head coaching career
 """
 
 import random
@@ -193,21 +192,6 @@ st.markdown("""
 # Session state helpers
 # ──────────────────────────────────────────────────────────────────────────────
 DEFAULTS = {
-    # Career mode
-    "career_player":       None,
-    "career_revealed":     0,
-    "career_guesses":      [],
-    "career_won":          False,
-    "career_gave_up":      False,
-    "career_input_key":    0,
-    "career_hints_used":   [],   # list of hint keys used this round
-    "career_hint_penalty": 0,    # points deducted for hints
-    # Footballer guesser mode
-    "fg_player":           None,
-    "fg_guesses":          [],
-    "fg_won":              False,
-    "fg_gave_up":          False,
-    "fg_input_key":        100,
     # Trophy Cabinet mode
     "tc_player":           None,
     "tc_revealed":         0,
@@ -253,15 +237,6 @@ DEFAULTS = {
     "ai_outcome_text":     "",
     "ai_stats":            {"goals": 0, "assists": 0, "trophies": 0, "caps": 0},
     "ai_history":          [],     # list of {stage, choice, outcome, delta}
-    # Beat the Footballer
-    "btf_player":          None,
-    "btf_questions":       [],
-    "btf_q_idx":           0,      # index of current question (0-4), 5 = done
-    "btf_selected":        None,   # answer the user selected; None = awaiting
-    "btf_answers":         [],     # list of bool
-    "btf_won":             False,
-    "btf_gave_up":         False,
-    "btf_input_key":       400,
     # Coach Career Sim
     "coach_manager":       None,   # {name, nationality, philosophy}
     "coach_stage_idx":     -1,     # -1=not started, 0-7=stage, 8=ended
@@ -314,23 +289,6 @@ if st.session_state.daily_date != str(today):
     st.session_state.daily_score       = None
     st.session_state.daily_input_key  += 1
 
-def reset_career(player):
-    st.session_state.career_player       = player
-    st.session_state.career_revealed     = 0
-    st.session_state.career_guesses      = []
-    st.session_state.career_won          = False
-    st.session_state.career_gave_up      = False
-    st.session_state.career_input_key   += 1
-    st.session_state.career_hints_used   = []
-    st.session_state.career_hint_penalty = 0
-
-def reset_fg(player):
-    st.session_state.fg_player    = player
-    st.session_state.fg_guesses   = []
-    st.session_state.fg_won       = False
-    st.session_state.fg_gave_up   = False
-    st.session_state.fg_input_key += 1
-
 def reset_tc(player):
     st.session_state.tc_player    = player
     st.session_state.tc_revealed  = 0
@@ -338,125 +296,6 @@ def reset_tc(player):
     st.session_state.tc_won       = False
     st.session_state.tc_gave_up   = False
     st.session_state.tc_input_key += 1
-
-def generate_btf_questions(target: dict, all_players: list) -> list:
-    """Generate 5 multiple-choice trivia questions about *target* player."""
-    rng = random.Random()
-    others = [p for p in all_players if p["name"] != target["name"]]
-    name   = target["name"]
-    career = target["career"]
-    pool   = []
-
-    # Nationality (easy)
-    wrong_nats = list({p["nationality"] for p in others if p["nationality"] != target["nationality"]})
-    rng.shuffle(wrong_nats)
-    choices = wrong_nats[:3] + [target["nationality"]]
-    rng.shuffle(choices)
-    pool.append({"q": f"🌍 What is {name}'s nationality?",
-                 "choices": choices, "correct": target["nationality"],
-                 "category": "Nationality"})
-
-    # Position group (easy)
-    pos_groups = ["Forward", "Midfielder", "Defender", "Goalkeeper"]
-    wrong_pos  = [p for p in pos_groups if p != target["position_group"]]
-    choices    = wrong_pos[:3] + [target["position_group"]]
-    rng.shuffle(choices)
-    pool.append({"q": f"⚽ What position group does {name} play in?",
-                 "choices": choices, "correct": target["position_group"],
-                 "category": "Position"})
-
-    # Club in a specific period (medium)
-    if career:
-        entry      = rng.choice(career)
-        wrong_clubs = list({e["club"] for p in others for e in p["career"]
-                            if e["club"] != entry["club"]})
-        rng.shuffle(wrong_clubs)
-        choices = wrong_clubs[:3] + [entry["club"]]
-        rng.shuffle(choices)
-        pool.append({"q": f"🏟️ Which club did {name} play for from {entry['years']}?",
-                     "choices": choices, "correct": entry["club"],
-                     "category": "Career Club"})
-
-    # Number of career clubs (medium)
-    n_clubs    = len(career)
-    wrong_ns   = list({n for n in range(max(1, n_clubs - 3), n_clubs + 4) if n != n_clubs})
-    rng.shuffle(wrong_ns)
-    choices = [str(n) for n in wrong_ns[:3]] + [str(n_clubs)]
-    rng.shuffle(choices)
-    pool.append({"q": f"🔢 How many clubs has {name} played for in their career?",
-                 "choices": choices, "correct": str(n_clubs),
-                 "category": "Career Length"})
-
-    # Main league (medium)
-    main_lg     = get_top_league(target)
-    known_lgs   = ["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1",
-                   "MLS", "Saudi Pro League", "Eredivisie", "Primeira Liga"]
-    wrong_lgs   = [l for l in known_lgs if l != main_lg]
-    rng.shuffle(wrong_lgs)
-    choices = wrong_lgs[:3] + [main_lg]
-    rng.shuffle(choices)
-    pool.append({"q": f"🏆 In which league did {name} spend the most time in their career?",
-                 "choices": choices, "correct": main_lg,
-                 "category": "Main League"})
-
-    # World Cup (medium)
-    wc      = get_meta(target, "world_cup_winner", False)
-    correct_wc = "Yes" if wc else "No"
-    pool.append({"q": f"🌍 Did {name} win the FIFA World Cup?",
-                 "choices": ["Yes", "No"], "correct": correct_wc,
-                 "category": "World Cup"})
-
-    # Ballon d'Or count (hard — only if won at least one)
-    ballon = target.get("ballon_dor", 0) or 0
-    if ballon > 0:
-        wrong_bs = list({b for b in [1, 2, 3, 4, 5, 6, 7, 8] if b != ballon})
-        rng.shuffle(wrong_bs)
-        choices = [str(b) for b in wrong_bs[:3]] + [str(ballon)]
-        rng.shuffle(choices)
-        pool.append({"q": f"🥇 How many Ballon d'Or awards has {name} won?",
-                     "choices": choices, "correct": str(ballon),
-                     "category": "Ballon d'Or"})
-
-    # Birth decade (medium)
-    decade      = (target["birth_year"] // 10) * 10
-    wrong_dec   = [d for d in [1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000]
-                   if d != decade]
-    rng.shuffle(wrong_dec)
-    choices = [str(d) + "s" for d in wrong_dec[:3]] + [str(decade) + "s"]
-    rng.shuffle(choices)
-    pool.append({"q": f"🎂 Which decade was {name} born in?",
-                 "choices": choices, "correct": str(decade) + "s",
-                 "category": "Birth Decade"})
-
-    # Current / last club (medium)
-    curr = target.get("current_club", "")
-    if curr:
-        wrong_cc = list({p.get("current_club", "") for p in others
-                         if p.get("current_club") and p.get("current_club") != curr})
-        rng.shuffle(wrong_cc)
-        choices = wrong_cc[:3] + [curr]
-        rng.shuffle(choices)
-        pool.append({"q": f"🔵 What is {name}'s current or most recent club?",
-                     "choices": choices, "correct": curr,
-                     "category": "Current Club"})
-
-    # Pick 5: always lead with nationality (easy warm-up), then 4 random others
-    rng.shuffle(pool)
-    nat_q     = next((q for q in pool if q["category"] == "Nationality"), None)
-    remainder = [q for q in pool if q["category"] != "Nationality"]
-    selected  = ([nat_q] + remainder) if nat_q else pool
-    return selected[:5]
-
-def reset_btf(player: dict):
-    pool = get_filtered() or PLAYERS
-    st.session_state.btf_player    = player
-    st.session_state.btf_questions = generate_btf_questions(player, pool)
-    st.session_state.btf_q_idx     = 0
-    st.session_state.btf_selected  = None
-    st.session_state.btf_answers   = []
-    st.session_state.btf_won       = False
-    st.session_state.btf_gave_up   = False
-    st.session_state.btf_input_key += 1
 
 def get_filtered():
     return filter_players(
@@ -537,20 +376,6 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### 📖 How to Play")
-    with st.expander("Career Timeline"):
-        st.markdown("""
-- Clubs revealed one by one  
-- Guess sooner = more points (max 1000)
-- 5 wrong guesses allowed
-- Use 💡 hints (costs points)
-""")
-    with st.expander("Footballer Guesser"):
-        st.markdown("""
-- Type a footballer's name  
-- 🟩 Correct &nbsp; 🟨 Close &nbsp; 🟥 Wrong  
-- 9 attributes compared  
-- Unlimited guesses  
-""")
     with st.expander("Trophy Cabinet"):
         st.markdown("""
 - Trophies revealed one by one  
@@ -562,13 +387,6 @@ with st.sidebar:
 - Same mystery player every day  
 - Career or Guesser mode  
 - Build your daily streak!  
-""")
-    with st.expander("Beat the Footballer"):
-        st.markdown("""
-- A star footballer challenges you  
-- Answer 5 multiple-choice questions about their career  
-- Get 3 or more right to **beat** them!  
-- Max 1 000 pts for a perfect 5/5  
 """)
 
     st.markdown("---")
@@ -589,17 +407,14 @@ with st.sidebar:
 # Main area — title
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Guesser</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · 8 game modes · AI-powered career simulation</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · AI-powered career &amp; coaching simulations</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_career, tab_fg, tab_tc, tab_daily, tab_stats, tab_ai, tab_btf, tab_coach, tab_nfl_player, tab_nfl_coach = st.tabs([
-    "🏟️ Career Timeline",
-    "🟩 Footballer Guesser",
+tab_tc, tab_daily, tab_stats, tab_ai, tab_coach, tab_nfl_player, tab_nfl_coach = st.tabs([
     "🏆 Trophy Cabinet",
     "📅 Daily Challenge",
     "📊 Stats & Achievements",
     "🤖 AI Career Sim",
-    "⚔️ Beat the Footballer",
     "🧑‍💼 Coach Career Sim",
     "🏈 NFL Player Sim",
     "🏈 NFL Head Coach",
@@ -696,275 +511,6 @@ def render_player_profile(player: dict):
             st.markdown(f'<span class="trophy-chip">🏆 {t}</span>', unsafe_allow_html=True)
     with col_chart:
         render_career_chart(player)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — CAREER TIMELINE
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_career:
-    pool = get_filtered()
-    cp = st.session_state.career_player
-
-    col_btn, col_hint_btn = st.columns([1, 3])
-    with col_btn:
-        if st.button("🎲 New Player", key="new_career"):
-            if pool:
-                reset_career(pick_random_player(pool))
-            else:
-                st.warning("No players match the current filters.")
-
-    if cp is None:
-        st.info("👈 Click **New Player** to start!")
-    else:
-
-        career   = cp["career"]
-        revealed = st.session_state.career_revealed
-        won      = st.session_state.career_won
-        gave_up  = st.session_state.career_gave_up
-        wrong_guesses = [g for g in st.session_state.career_guesses if g != cp["name"]]
-
-        # ── Metrics bar ──────────────────────────────────────────────────────────
-        c1, c2, c3, c4 = st.columns(4)
-        base_pts = score_for_guess(revealed, len(career))
-        penalty  = st.session_state.career_hint_penalty
-        with c1:
-            st.metric("Clubs Revealed", f"{revealed} / {len(career)}")
-        with c2:
-            st.metric("Points if correct now", f"⭐ {max(0, base_pts - penalty)}")
-        with c3:
-            st.metric("Wrong Guesses", f"{len(wrong_guesses)} / 5")
-        with c4:
-            st.metric("Position Group", cp["position_group"])
-
-        # ── Hints section ─────────────────────────────────────────────────────────
-        if not won and not gave_up:
-            hints_used = st.session_state.career_hints_used
-            with st.expander("💡 Hints  (each costs points from your score)"):
-                h1, h2, h3 = st.columns(3)
-                with h1:
-                    if "nationality" not in hints_used:
-                        if st.button("🌍 Nationality (-100 pts)", key="hint_nat"):
-                            st.session_state.career_hints_used.append("nationality")
-                            st.session_state.career_hint_penalty += 100
-                            st.rerun()
-                    else:
-                        flag = FLAGS.get(cp["nationality"], "🌍")
-                        st.markdown(f'<div class="hint-box">🌍 {flag} {cp["nationality"]}</div>', unsafe_allow_html=True)
-                with h2:
-                    if "continent" not in hints_used:
-                        if st.button("🗺️ Continent (-75 pts)", key="hint_cont"):
-                            st.session_state.career_hints_used.append("continent")
-                            st.session_state.career_hint_penalty += 75
-                            st.rerun()
-                    else:
-                        st.markdown(f'<div class="hint-box">🗺️ {get_meta(cp, "continent", "?")}</div>', unsafe_allow_html=True)
-                with h3:
-                    if "birth_decade" not in hints_used:
-                        if st.button("🎂 Birth Decade (-50 pts)", key="hint_age"):
-                            st.session_state.career_hints_used.append("birth_decade")
-                            st.session_state.career_hint_penalty += 50
-                            st.rerun()
-                    else:
-                        decade = (cp["birth_year"] // 10) * 10
-                        st.markdown(f'<div class="hint-box">🎂 Born in the {decade}s</div>', unsafe_allow_html=True)
-
-        # ── Career cards ──────────────────────────────────────────────────────────
-        st.markdown("### 🏟️ Career Path")
-        show_count = revealed if not (won or gave_up) else len(career)
-        if show_count == 0 and not (won or gave_up):
-            st.info("No clubs revealed yet. Click **Reveal Next Club** to start.")
-        else:
-            for entry in career[:show_count]:
-                lg     = entry["league"]
-                colour = LEAGUE_COLOURS.get(lg, LEAGUE_COLOURS.get("Other", "#555555"))
-                st.markdown(f"""
-    <div class="career-card" style="border-left-color:{colour}">
-      <span class="club-name">🏟️ {entry['club']}</span>
-      <span class="club-detail"> &nbsp;|&nbsp; {lg} &nbsp;|&nbsp; {entry['years']}</span>
-    </div>""", unsafe_allow_html=True)
-
-        # ── Action buttons ────────────────────────────────────────────────────────
-        if not won and not gave_up:
-            col_reveal, _ = st.columns([1, 3])
-            with col_reveal:
-                if revealed < len(career):
-                    if st.button("🔍 Reveal Next Club", key="reveal_club"):
-                        st.session_state.career_revealed += 1
-                        st.rerun()
-                else:
-                    st.warning("All clubs revealed! Take a guess below.")
-
-            st.markdown("### 🤔 Your Guess")
-            all_names = all_player_names()
-            guess = st.selectbox(
-                "Type or select a player name:",
-                options=[""] + all_names,
-                key=f"career_guess_{st.session_state.career_input_key}",
-                label_visibility="collapsed",
-            )
-
-            col_guess, col_giveup = st.columns([1, 1])
-            with col_guess:
-                if st.button("✅ Submit Guess", key="submit_career"):
-                    if not guess:
-                        st.warning("Please select a player first.")
-                    else:
-                        st.session_state.career_guesses.append(guess)
-                        if guess == cp["name"]:
-                            pts = max(0, score_for_guess(revealed, len(career)) - st.session_state.career_hint_penalty)
-                            st.session_state.total_score   += pts
-                            st.session_state.rounds_played += 1
-                            st.session_state.win_streak    += 1
-                            st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
-                            st.session_state.career_won     = True
-                            st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": True, "points": pts})
-                            st.rerun()
-                        else:
-                            wg = [g for g in st.session_state.career_guesses if g != cp["name"]]
-                            if len(wg) >= 5:
-                                st.session_state.career_gave_up   = True
-                                st.session_state.rounds_played    += 1
-                                st.session_state.win_streak        = 0
-                                st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": False, "points": 0})
-                                st.rerun()
-                            else:
-                                st.session_state.career_input_key += 1
-                                st.rerun()
-            with col_giveup:
-                if st.button("🏳️ Give Up", key="giveup_career"):
-                    st.session_state.career_gave_up   = True
-                    st.session_state.rounds_played    += 1
-                    st.session_state.win_streak        = 0
-                    st.session_state.history.append({"mode": "Career", "name": cp["name"], "won": False, "points": 0})
-                    st.rerun()
-
-            if wrong_guesses:
-                st.markdown("**❌ Wrong guesses:** " + " • ".join(wrong_guesses))
-
-        # ── Game-over panel ───────────────────────────────────────────────────────
-        if won or gave_up:
-            flag = FLAGS.get(cp["nationality"], "🌍")
-            if won:
-                pts = max(0, score_for_guess(
-                    next((i for i, g in enumerate(st.session_state.career_guesses) if g == cp["name"]), revealed),
-                    len(career)
-                ) - st.session_state.career_hint_penalty)
-                st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{cp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="result-wrong">😔 The answer was <b>{cp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
-
-            st.markdown("### 📋 Full Career")
-            for entry in career:
-                lg     = entry["league"]
-                colour = LEAGUE_COLOURS.get(lg, "#555555")
-                st.markdown(f"""
-    <div class="career-card" style="border-left-color:{colour}">
-      <span class="club-name">🏟️ {entry['club']}</span>
-      <span class="club-detail"> &nbsp;|&nbsp; {lg} &nbsp;|&nbsp; {entry['years']}</span>
-    </div>""", unsafe_allow_html=True)
-
-            st.markdown("### 🌟 Player Profile")
-            render_player_profile(cp)
-
-            if st.button("▶️ Play Again", key="play_again_career"):
-                pool = get_filtered()
-                if pool:
-                    reset_career(pick_random_player(pool))
-                    st.rerun()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — FOOTBALLER GUESSER
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_fg:
-    pool  = get_filtered()
-    fgp   = st.session_state.fg_player
-    guesses = st.session_state.fg_guesses
-
-    col_btn2, _ = st.columns([1, 3])
-    with col_btn2:
-        if st.button("🎲 New Player", key="new_fg"):
-            if pool:
-                reset_fg(pick_random_player(pool))
-            else:
-                st.warning("No players match the current filters.")
-
-    if fgp is None:
-        st.info("👈 Click **New Player** to start!")
-    else:
-
-        won_fg     = st.session_state.fg_won
-        gave_up_fg = st.session_state.fg_gave_up
-        flag = FLAGS.get(fgp["nationality"], "🌍")
-
-        if won_fg:
-            pts = max(200, 1000 - (len(guesses) - 1) * 100)
-            st.markdown(f'<div class="result-correct">🎉 Correct! That\'s <b>{fgp["name"]}</b> {flag} — +{pts} pts!</div>', unsafe_allow_html=True)
-        elif gave_up_fg:
-            st.markdown(f'<div class="result-wrong">😔 The answer was <b>{fgp["name"]}</b> {flag}</div>', unsafe_allow_html=True)
-
-        # Legend
-        st.markdown(
-            "🟩 **Correct** &nbsp;&nbsp; 🟨 **Close** (age ±6 yrs) &nbsp;&nbsp; 🟥 **Wrong**",
-            unsafe_allow_html=True
-        )
-
-        render_fg_header()
-        for guess_name, cmp in guesses:
-            render_fg_row(guess_name, cmp)
-
-        # ── Guess input ───────────────────────────────────────────────────────────
-        if not won_fg and not gave_up_fg:
-            st.markdown("### 🤔 Guess a Footballer")
-            already_guessed = [g[0] for g in guesses]
-            remaining = [n for n in all_player_names() if n not in already_guessed]
-
-            fg_guess = st.selectbox(
-                "Type or select a player:",
-                options=[""] + remaining,
-                key=f"fg_guess_{st.session_state.fg_input_key}",
-                label_visibility="collapsed",
-            )
-
-            col_g, col_gu = st.columns([1, 1])
-            with col_g:
-                if st.button("✅ Submit Guess", key="submit_fg"):
-                    if not fg_guess:
-                        st.warning("Select a player first.")
-                    else:
-                        gp = name_to_player.get(fg_guess)
-                        if gp is None:
-                            st.warning("Unknown player.")
-                        else:
-                            cmp = compare_players(gp, fgp)
-                            st.session_state.fg_guesses.append((fg_guess, cmp))
-                            if fg_guess == fgp["name"]:
-                                pts = max(200, 1000 - (len(st.session_state.fg_guesses) - 1) * 100)
-                                st.session_state.total_score   += pts
-                                st.session_state.rounds_played += 1
-                                st.session_state.win_streak    += 1
-                                st.session_state.best_streak    = max(st.session_state.best_streak, st.session_state.win_streak)
-                                st.session_state.fg_won         = True
-                                st.session_state.history.append({"mode": "Guesser", "name": fgp["name"], "won": True, "points": pts})
-                            st.session_state.fg_input_key += 1
-                            st.rerun()
-            with col_gu:
-                if st.button("🏳️ Give Up", key="giveup_fg"):
-                    st.session_state.fg_gave_up    = True
-                    st.session_state.rounds_played += 1
-                    st.session_state.win_streak     = 0
-                    st.session_state.history.append({"mode": "Guesser", "name": fgp["name"], "won": False, "points": 0})
-                    st.rerun()
-
-            if guesses:
-                st.caption(f"💡 Guesses so far: {len(guesses)}")
-
-        if won_fg or gave_up_fg:
-            st.markdown("### 🌟 Player Profile")
-            render_player_profile(fgp)
-            if st.button("▶️ Play Again", key="play_again_fg"):
-                pool = get_filtered()
-                if pool:
-                    reset_fg(pick_random_player(pool))
-                    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — TROPHY CABINET
@@ -1325,10 +871,7 @@ with tab_stats:
     best_streak  = st.session_state.best_streak
     daily_streak = st.session_state.daily_streak
     wins_count   = sum(1 for h in st.session_state.history if h["won"])
-    career_wins  = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Career")
-    guesser_wins = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Guesser")
     trophy_wins  = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Trophy")
-    beat_wins    = sum(1 for h in st.session_state.history if h["won"] and h["mode"] == "Beat")
 
     achievements = [
         {"icon": "🎯", "name": "First Blood",       "desc": "Win your first round",       "unlocked": wins_count >= 1},
@@ -1338,13 +881,9 @@ with tab_stats:
         {"icon": "⚡", "name": "Unstoppable",        "desc": "Reach a 10-win streak",      "unlocked": best_streak >= 10},
         {"icon": "⭐", "name": "Point Collector",    "desc": "Score 1,000 total points",   "unlocked": total_score >= 1000},
         {"icon": "🌟", "name": "High Scorer",        "desc": "Score 10,000 total points",  "unlocked": total_score >= 10000},
-        {"icon": "🏟️", "name": "Career Expert",      "desc": "Win 5 Career Timeline rounds","unlocked": career_wins >= 5},
-        {"icon": "🟩", "name": "Attribute Master",   "desc": "Win 5 Footballer Guesser rounds","unlocked": guesser_wins >= 5},
         {"icon": "🏆", "name": "Trophy Hunter",      "desc": "Win 5 Trophy Cabinet rounds","unlocked": trophy_wins >= 5},
         {"icon": "📅", "name": "Daily Devotee",      "desc": "Get a 3-day daily streak",   "unlocked": daily_streak >= 3},
         {"icon": "📅", "name": "Daily Legend",       "desc": "Get a 7-day daily streak",   "unlocked": daily_streak >= 7},
-        {"icon": "⚔️", "name": "Giant Slayer",       "desc": "Beat a footballer 3 times",  "unlocked": beat_wins >= 3},
-        {"icon": "🥊", "name": "Unbeatable",         "desc": "Beat 10 footballers",         "unlocked": beat_wins >= 10},
     ]
 
     unlocked_count = sum(1 for a in achievements if a["unlocked"])
@@ -2466,196 +2005,8 @@ with tab_coach:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 7 — BEAT THE FOOTBALLER
+# NFL PLAYER SIM — constants, helpers, tab rendering
 # ══════════════════════════════════════════════════════════════════════════════
-with tab_btf:
-    st.markdown("## ⚔️ Beat the Footballer")
-    st.markdown(
-        "A legendary footballer challenges you to a career trivia showdown! "
-        "Answer **5 questions** about their career — get **3 or more correct** to beat them!"
-    )
-
-    pool = get_filtered()
-
-    col_btn_btf, _ = st.columns([1, 3])
-    with col_btn_btf:
-        if st.button("🎲 New Opponent", key="new_btf"):
-            if pool:
-                reset_btf(pick_random_player(pool))
-            else:
-                st.warning("No players match the current filters.")
-
-    bp = st.session_state.btf_player
-
-    if bp is None:
-        st.info("👈 Click **New Opponent** to start a challenge!")
-    else:
-        questions  = st.session_state.btf_questions
-        q_idx      = st.session_state.btf_q_idx
-        answers    = st.session_state.btf_answers
-        btf_gave_up = st.session_state.btf_gave_up
-        flag_btf   = FLAGS.get(bp["nationality"], "🌍")
-
-        correct          = sum(answers)
-        answered         = len(answers)
-        footballer_score = answered - correct
-
-        # ── Opponent card ─────────────────────────────────────────────────────
-        st.markdown(
-            f'<div style="background:rgba(255,100,0,0.12);border:2px solid #ff6b00;'
-            f'border-radius:14px;padding:16px 20px;margin:12px 0;">'
-            f'<div style="font-size:1.4rem;font-weight:800;color:#ff8c00;">⚔️ Your Opponent</div>'
-            f'<div style="font-size:1.2rem;color:white;margin-top:4px;">'
-            f'{flag_btf} <strong>{bp["name"]}</strong></div>'
-            f'<div style="color:#aaa;font-size:0.9rem;">'
-            f'{bp["position_group"]} · {bp["nationality"]} · {bp.get("difficulty","?")} difficulty'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
-
-        # ── Live score bar ────────────────────────────────────────────────────
-        sc1, sc2, sc3 = st.columns(3)
-        with sc1:
-            st.markdown(
-                f'<div class="score-box"><div class="score-val">{correct} ⚽</div>'
-                f'<div class="score-lbl">You</div></div>',
-                unsafe_allow_html=True,
-            )
-        with sc2:
-            st.markdown(
-                f'<div class="score-box"><div class="score-val">{answered} / 5</div>'
-                f'<div class="score-lbl">Questions</div></div>',
-                unsafe_allow_html=True,
-            )
-        with sc3:
-            first_name = bp["name"].split()[0]
-            st.markdown(
-                f'<div class="daily-box"><div class="score-val">{footballer_score} ⚽</div>'
-                f'<div class="score-lbl">{first_name}</div></div>',
-                unsafe_allow_html=True,
-            )
-
-        st.markdown("---")
-
-        # ── Game over (all 5 answered, or gave up) ────────────────────────────
-        if q_idx >= len(questions) or btf_gave_up:
-            if btf_gave_up:
-                st.markdown(
-                    f'<div class="result-wrong">🏳️ You gave up! {correct}/{answered} correct before quitting.</div>',
-                    unsafe_allow_html=True,
-                )
-            elif correct >= 3:
-                pts_map = {5: 1000, 4: 750, 3: 500}
-                pts     = pts_map.get(correct, 500)
-                st.markdown(
-                    f'<div class="result-correct">🏆 You beat {bp["name"]}! {correct}/5 correct — +{pts} pts!</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                pts_map = {2: 250, 1: 100, 0: 0}
-                pts     = pts_map.get(correct, 0)
-                msg     = f" — +{pts} pts for trying!" if pts > 0 else ""
-                st.markdown(
-                    f'<div class="result-wrong">😔 {bp["name"]} beat you! ({correct}/5 correct){msg}</div>',
-                    unsafe_allow_html=True,
-                )
-
-            # Question review
-            st.markdown("### 📋 Question Review")
-            for i, (q_item, was_correct) in enumerate(zip(questions[:len(answers)], answers)):
-                icon = "✅" if was_correct else "❌"
-                st.markdown(f"**{icon} Q{i+1}: {q_item['q']}**")
-                st.markdown(f"&nbsp;&nbsp;&nbsp;➜ Correct answer: **{q_item['correct']}**")
-
-            if st.button("▶️ New Challenge", key="btf_play_again"):
-                pool = get_filtered()
-                if pool:
-                    reset_btf(pick_random_player(pool))
-                    st.rerun()
-
-        # ── Showing feedback for current question ─────────────────────────────
-        elif st.session_state.btf_selected is not None:
-            q        = questions[q_idx]
-            selected = st.session_state.btf_selected
-            is_correct = (selected == q["correct"])
-
-            st.markdown(f"### Q{q_idx + 1} / 5 — {q['category']}")
-            st.markdown(f"#### {q['q']}")
-
-            if is_correct:
-                st.markdown(
-                    f'<div class="result-correct">✅ Correct! The answer is <b>{q["correct"]}</b></div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f'<div class="result-wrong">❌ Wrong! You said <b>{selected}</b> — '
-                    f'the answer is <b>{q["correct"]}</b></div>',
-                    unsafe_allow_html=True,
-                )
-
-            next_label = "▶️ Next Question" if q_idx < len(questions) - 1 else "🏁 See Results"
-            if st.button(next_label, key="btf_next"):
-                st.session_state.btf_answers.append(is_correct)
-                st.session_state.btf_q_idx   += 1
-                st.session_state.btf_selected  = None
-
-                # Record stats when last question is answered
-                new_q_idx  = st.session_state.btf_q_idx
-                if new_q_idx >= len(questions):
-                    new_correct = sum(st.session_state.btf_answers)
-                    won         = new_correct >= 3
-                    st.session_state.btf_won = won
-                    if won:
-                        pts = {5: 1000, 4: 750, 3: 500}.get(new_correct, 500)
-                        st.session_state.total_score   += pts
-                        st.session_state.rounds_played += 1
-                        st.session_state.win_streak    += 1
-                        st.session_state.best_streak    = max(
-                            st.session_state.best_streak, st.session_state.win_streak
-                        )
-                        st.session_state.history.append(
-                            {"mode": "Beat", "name": bp["name"], "won": True, "points": pts}
-                        )
-                    else:
-                        pts = {2: 250, 1: 100, 0: 0}.get(new_correct, 0)
-                        st.session_state.total_score   += pts
-                        st.session_state.rounds_played += 1
-                        st.session_state.win_streak     = 0
-                        st.session_state.history.append(
-                            {"mode": "Beat", "name": bp["name"], "won": False, "points": pts}
-                        )
-                st.rerun()
-
-        # ── Awaiting answer for current question ──────────────────────────────
-        else:
-            q = questions[q_idx]
-            st.markdown(f"### Q{q_idx + 1} / 5 — {q['category']}")
-            st.markdown(f"#### {q['q']}")
-
-            btn_cols = st.columns(2)
-            for i, choice in enumerate(q["choices"]):
-                with btn_cols[i % 2]:
-                    if st.button(
-                        choice,
-                        key=f"btf_choice_{st.session_state.btf_input_key}_{q_idx}_{i}",
-                        use_container_width=True,
-                    ):
-                        st.session_state.btf_selected = choice
-                        st.rerun()
-
-            st.markdown("---")
-            col_quit, _ = st.columns([1, 3])
-            with col_quit:
-                if st.button("🏳️ Give Up", key="btf_giveup"):
-                    st.session_state.btf_gave_up   = True
-                    st.session_state.rounds_played += 1
-                    st.session_state.win_streak     = 0
-                    st.session_state.history.append(
-                        {"mode": "Beat", "name": bp["name"], "won": False, "points": 0}
-                    )
-                    st.rerun()
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # NFL PLAYER SIM — constants, helpers, tab rendering
