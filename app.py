@@ -2035,7 +2035,7 @@ def _coach_stage_data(philosophy: str) -> list:
     """
     return [
         # 0 – Grassroots & Youth Coaching (30-35)
-        (
+        [(
             "After hanging up the boots, {name} took their first coaching badge and joined a local club's youth set-up. "
             "The {philosophy} philosophy was already taking shape on the training ground.",
             ("Focus on developing young talent — run an elite academy programme",
@@ -2044,9 +2044,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 18, "trophies": 1, "players_developed": 3, "reputation": 10}),
             ("Take charge of a semi-pro club and target a shock promotion to raise your profile",
              {"wins": 14, "trophies": 1, "players_developed": 5, "reputation": 8}),
-        ),
+        ), (
+            "Word spread fast on the grassroots circuit — {name}'s sessions were different. "
+            "The {philosophy} fingerprints were all over every drill, every set-piece, every team talk.",
+            ("Build a model academy pipeline that produces three future professional players",
+             {"wins": 12, "trophies": 0, "players_developed": 10, "reputation": 7}),
+            ("Lead the youth team to a regional cup triumph that makes national headlines",
+             {"wins": 20, "trophies": 1, "players_developed": 4, "reputation": 12}),
+            ("Volunteer to help coach a national youth development squad on the side",
+             {"wins": 8, "trophies": 0, "players_developed": 9, "reputation": 9}),
+        ), (
+            "The under-18 side had never been so organised. {name}'s meticulous preparation "
+            "and clear {philosophy} principles were already creating a buzz in the dugout.",
+            ("Enter the reserves into a prestigious pre-season tournament to showcase the talent",
+             {"wins": 16, "trophies": 1, "players_developed": 6, "reputation": 8}),
+            ("Introduce pioneering data analytics methods to the youth setup for the first time",
+             {"wins": 10, "trophies": 0, "players_developed": 7, "reputation": 11}),
+            ("Personally scout three hidden gems and fast-track them through the academy ranks",
+             {"wins": 13, "trophies": 0, "players_developed": 9, "reputation": 7}),
+        )],
         # 1 – Assistant Coach (35-38)
-        (
+        [(
             "An impressive stint in the youth ranks caught the attention of a professional club. "
             "{name} was offered an assistant role, learning the art of management from the dugout.",
             ("Learn from a world-renowned head coach at a top-flight club",
@@ -2055,9 +2073,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 30, "trophies": 1, "players_developed": 6, "reputation": 18}),
             ("Accept a dual role as assistant and head of analytics at a progressive lower-league club",
              {"wins": 26, "trophies": 1, "players_developed": 8, "reputation": 14}),
-        ),
+        ), (
+            "The phone call from a professional club changed everything. {name} was given "
+            "the chance to apply the {philosophy} ideas on a senior stage for the first time.",
+            ("Shadow a legendary manager through a title challenge and absorb every lesson",
+             {"wins": 25, "trophies": 2, "players_developed": 3, "reputation": 17}),
+            ("Take over first-team duties when the head coach is suspended for three crucial games",
+             {"wins": 28, "trophies": 1, "players_developed": 5, "reputation": 20}),
+            ("Launch a detailed tactical analysis programme that revolutionises the club's approach",
+             {"wins": 22, "trophies": 1, "players_developed": 9, "reputation": 15}),
+        ), (
+            "The assistant's role was supposed to be a stepping stone — but the players "
+            "were already gravitating towards {name}'s sharp tactical mind and {philosophy} sessions.",
+            ("Push for interim manager duties when the head coach faces a crisis mid-season",
+             {"wins": 29, "trophies": 1, "players_developed": 4, "reputation": 19}),
+            ("Build a reputation as the best assistant in the league through meticulous preparation",
+             {"wins": 20, "trophies": 2, "players_developed": 7, "reputation": 16}),
+            ("Travel abroad to study coaching methods under a renowned continental manager",
+             {"wins": 18, "trophies": 1, "players_developed": 10, "reputation": 14}),
+        )],
         # 2 – First Head Coach Role (38-42)
-        (
+        [(
             "The moment had arrived. {name} was handed the keys to a club for the first time. "
             "The {philosophy} system was installed from day one — but the squad needed time to adapt.",
             ("Implement the system boldly and demand results from the start",
@@ -2066,9 +2102,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 32, "trophies": 1, "players_developed": 9, "reputation": 25}),
             ("Take over a mid-table club mid-season and mount a remarkable survival campaign",
              {"wins": 30, "trophies": 0, "players_developed": 7, "reputation": 20}),
-        ),
+        ), (
+            "The dressing room fell silent when {name} walked in for the first time as head coach. "
+            "Change was coming — and the {philosophy} revolution would begin immediately.",
+            ("Strip the squad back and blood six academy graduates to shake up the culture",
+             {"wins": 34, "trophies": 1, "players_developed": 11, "reputation": 22}),
+            ("Secure two key signings that perfectly embody the {philosophy} principles",
+             {"wins": 40, "trophies": 2, "players_developed": 4, "reputation": 24}),
+            ("Demand an immediate board meeting to outline a bold three-year plan and get full backing",
+             {"wins": 36, "trophies": 1, "players_developed": 6, "reputation": 26}),
+        ), (
+            "The job was supposed to be a risk. {name} proved within weeks that the {philosophy} "
+            "blueprint was tailor-made for this squad — the results followed swiftly.",
+            ("Mount a surprise cup run that captures the nation's imagination",
+             {"wins": 35, "trophies": 2, "players_developed": 6, "reputation": 23}),
+            ("Focus on a record-breaking unbeaten run to announce the arrival emphatically",
+             {"wins": 42, "trophies": 1, "players_developed": 4, "reputation": 25}),
+            ("Implement a revolutionary pressing system that earns manager-of-the-month in the first season",
+             {"wins": 37, "trophies": 1, "players_developed": 8, "reputation": 24}),
+        )],
         # 3 – Mid-Table Manager (42-46)
-        (
+        [(
             "A strong first stint earned {name} a move to a more established club. "
             "The challenge now was punching above the club's weight — and turning heads across the continent.",
             ("Go all-in on an exciting young transfer policy to build for the future",
@@ -2077,9 +2131,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 55, "trophies": 3, "players_developed": 5, "reputation": 32}),
             ("Make a bold overseas move to manage a foreign club and build a continental reputation",
              {"wins": 48, "trophies": 2, "players_developed": 8, "reputation": 30}),
-        ),
+        ), (
+            "The media had written them off before a ball was kicked. {name} used it as fuel, "
+            "drilling the {philosophy} methodology into a squad hungry to prove the doubters wrong.",
+            ("Sign a veteran leader as captain and build the squad around their experience",
+             {"wins": 50, "trophies": 2, "players_developed": 7, "reputation": 29}),
+            ("Introduce a high-intensity pressing game that dismantles the big clubs",
+             {"wins": 58, "trophies": 3, "players_developed": 4, "reputation": 34}),
+            ("Invest heavily in sports science and nutrition to squeeze extra performance out of the squad",
+             {"wins": 46, "trophies": 2, "players_developed": 10, "reputation": 28}),
+        ), (
+            "Turning mid-table mediocrity into genuine ambition was the task. {name}'s "
+            "{philosophy} blueprint had the fans dreaming for the first time in years.",
+            ("Launch a fan engagement campaign to fill the stadium and create a fortress",
+             {"wins": 47, "trophies": 2, "players_developed": 9, "reputation": 27}),
+            ("Force a transfer window showdown with the board and demand top-quality signings",
+             {"wins": 56, "trophies": 3, "players_developed": 5, "reputation": 33}),
+            ("Build a fierce local derby reputation that galvanises the city behind the club",
+             {"wins": 52, "trophies": 2, "players_developed": 7, "reputation": 30}),
+        )],
         # 4 – Title Contender (46-50)
-        (
+        [(
             "A European finish attracted serious attention. {name} was now managing a genuine title contender, "
             "with real ambitions of silverware and continental glory on the agenda.",
             ("Challenge for the title and domestic cup double in one historic season",
@@ -2088,9 +2160,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 50, "trophies": 3, "players_developed": 6, "reputation": 42}),
             ("Shock the world by resigning to take over an underdog club and deliver a Cinderella title",
              {"wins": 54, "trophies": 3, "players_developed": 10, "reputation": 40}),
-        ),
+        ), (
+            "Two genuine title challengers in one final sprint to the line. {name}'s "
+            "{philosophy} system was purring — but the margin for error was razor thin.",
+            ("Unleash a daring attacking style that produces a record-breaking points total",
+             {"wins": 65, "trophies": 3, "players_developed": 6, "reputation": 40}),
+            ("Prioritise cup competitions to bank silverware ahead of a long-term title push",
+             {"wins": 55, "trophies": 4, "players_developed": 8, "reputation": 37}),
+            ("Make a shock January signing who transforms the title race at a crucial moment",
+             {"wins": 60, "trophies": 3, "players_developed": 7, "reputation": 39}),
+        ), (
+            "The squad believed they could win everything. {name}'s tactical masterclass "
+            "was turning heads across the continent — and the toughest tests were arriving.",
+            ("Win the title on the final day in a match that captures the entire nation",
+             {"wins": 63, "trophies": 3, "players_developed": 7, "reputation": 40}),
+            ("Manage a Champions League semi-final run that sends the club's global profile soaring",
+             {"wins": 52, "trophies": 3, "players_developed": 6, "reputation": 44}),
+            ("Navigate a difficult run of injuries to win silverware with a depleted but resilient squad",
+             {"wins": 58, "trophies": 4, "players_developed": 9, "reputation": 38}),
+        )],
         # 5 – Elite Club Manager (50-55)
-        (
+        [(
             "Europe's elite came calling. {name} was appointed at one of the world's most scrutinised clubs, "
             "where only trophies and attractive {philosophy} football would satisfy the fanbase.",
             ("Win back-to-back league titles and reinforce your domestic dominance",
@@ -2099,9 +2189,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 65, "trophies": 4, "players_developed": 6, "reputation": 55}),
             ("Leave the elite club to take over a sleeping giant and orchestrate the greatest revival in football history",
              {"wins": 70, "trophies": 4, "players_developed": 10, "reputation": 50}),
-        ),
+        ), (
+            "The world's biggest stage. {name} arrived at the superclub with an immediate demand "
+            "for {philosophy} perfection — and the squad had the talent to deliver it.",
+            ("Mastermind a treble — league, domestic cup, Champions League — in a single season",
+             {"wins": 72, "trophies": 6, "players_developed": 5, "reputation": 58}),
+            ("Build a dynasty through youth development that defines the club for a generation",
+             {"wins": 68, "trophies": 4, "players_developed": 14, "reputation": 50}),
+            ("Revolutionise the club's transfer strategy and unearth two generational talents from non-leagues",
+             {"wins": 75, "trophies": 4, "players_developed": 12, "reputation": 52}),
+        ), (
+            "Under {name}'s command, the superclub rediscovered its identity. The {philosophy} "
+            "brand of football drew global admiration and the trophies followed.",
+            ("Secure the Champions League to complete a historic continental dominance",
+             {"wins": 68, "trophies": 5, "players_developed": 6, "reputation": 56}),
+            ("Engineer a contract extension that gives total control over transfers and tactics",
+             {"wins": 78, "trophies": 5, "players_developed": 8, "reputation": 50}),
+            ("Launch an iconic rivalry with another elite manager that defines an era of football",
+             {"wins": 70, "trophies": 4, "players_developed": 7, "reputation": 55}),
+        )],
         # 6 – International Manager (55-60)
-        (
+        [(
             "After trophy-laden club years, {name} accepted the call to manage the national team — "
             "the ultimate honour in football management.",
             ("Build a golden generation of young talent for a long-term World Cup project",
@@ -2110,9 +2218,27 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 35, "trophies": 3, "players_developed": 8, "reputation": 60}),
             ("Take over a dark-horse nation and pull off the greatest international upset in tournament history",
              {"wins": 28, "trophies": 2, "players_developed": 12, "reputation": 58}),
-        ),
+        ), (
+            "The nation had waited years for a manager of {name}'s calibre. The {philosophy} "
+            "system arrived on the international stage to transformative effect.",
+            ("Win the World Cup in dramatic penalty-shootout fashion watched by billions",
+             {"wins": 32, "trophies": 3, "players_developed": 9, "reputation": 65}),
+            ("Qualify the nation for their first major tournament in decades, igniting a football renaissance",
+             {"wins": 38, "trophies": 1, "players_developed": 16, "reputation": 52}),
+            ("Launch a bold experiment blooding ten players under 21 in the starting eleven",
+             {"wins": 30, "trophies": 2, "players_developed": 18, "reputation": 54}),
+        ), (
+            "The prestige of the national team badge on the training ground chest was everything. "
+            "{name}'s {philosophy} system gave the nation belief it had not felt in decades.",
+            ("Build a relentless qualifying campaign that sets records and builds unshakeable belief",
+             {"wins": 36, "trophies": 2, "players_developed": 12, "reputation": 56}),
+            ("Make a legendary tournament final appearance that cements national hero status forever",
+             {"wins": 30, "trophies": 3, "players_developed": 7, "reputation": 62}),
+            ("Mastermind a youth revolution that launches ten new internationals in one tournament",
+             {"wins": 26, "trophies": 1, "players_developed": 20, "reputation": 55}),
+        )],
         # 7 – Legendary Final Chapter (60+)
-        (
+        [(
             "At 60, {name}'s legacy was already assured. But one final chapter remained — "
             "a chance to cement a place among the all-time managerial greats.",
             ("Return to a former club for an emotional reunion and one last title push",
@@ -2121,7 +2247,25 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 45, "trophies": 3, "players_developed": 18, "reputation": 50}),
             ("Accept a Director of Football role at a top club, shaping the next generation of managers",
              {"wins": 20, "trophies": 2, "players_developed": 20, "reputation": 45}),
-        ),
+        ), (
+            "At 60-plus, {name}'s mind remained the sharpest in the game. One last challenge "
+            "called — a chance to leave a {philosophy} legacy that would outlast the career itself.",
+            ("Take over a crisis club and engineer the greatest great escape in football memory",
+             {"wins": 35, "trophies": 1, "players_developed": 12, "reputation": 42}),
+            ("Mentor a young manager while still leading a club to European football as a send-off",
+             {"wins": 28, "trophies": 2, "players_developed": 22, "reputation": 48}),
+            ("Pen a landmark coaching manual and deliver a final trophy to add to the collection",
+             {"wins": 32, "trophies": 2, "players_developed": 14, "reputation": 44}),
+        ), (
+            "The farewell tour was beginning — but {name} refused to treat it as anything other "
+            "than another championship mission. Retirement could wait a little longer.",
+            ("Win a final unexpected trophy at a club few expected to be competitive",
+             {"wins": 38, "trophies": 3, "players_developed": 10, "reputation": 46}),
+            ("Accept a role at a football federation to shape coaching education globally",
+             {"wins": 15, "trophies": 1, "players_developed": 25, "reputation": 50}),
+            ("Return to grassroots football to inspire the next generation one last time",
+             {"wins": 22, "trophies": 1, "players_developed": 20, "reputation": 42}),
+        )],
     ]
 
 
