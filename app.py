@@ -880,6 +880,7 @@ def _stage_data(position_group: str) -> list:
                 "The first-team manager kept a close eye on this emerging talent.",
                 ("Push for a first-team debut this season",                  {"goals": 4,  "assists": 2,  "trophies": 0, "caps": 0}),
                 ("Accept a loan to a lower-league club for more minutes",    {"goals": 9,  "assists": 3,  "trophies": 0, "caps": 0}),
+                ("Seek a trial abroad at a European club for a fresh challenge", {"goals": 6,  "assists": 4,  "trophies": 0, "caps": 0}),
             ),
             # 1 – Professional Debut (18-21)
             (
@@ -887,6 +888,7 @@ def _stage_data(position_group: str) -> list:
                 "Two very different paths lay ahead.",
                 ("Sign for a top-flight giant and fight for a squad role",   {"goals": 14, "assists": 8,  "trophies": 1, "caps": 5}),
                 ("Choose a mid-table club for guaranteed first-team minutes", {"goals": 22, "assists": 10, "trophies": 0, "caps": 8}),
+                ("Move abroad to a foreign league as a young starter",           {"goals": 18, "assists": 6,  "trophies": 0, "caps": 12}),
             ),
             # 2 – Rising Star (21-24)
             (
@@ -894,6 +896,7 @@ def _stage_data(position_group: str) -> list:
                 "Champions League clubs are circling and the phone hasn't stopped ringing.",
                 ("Join a Champions League contender",                        {"goals": 30, "assists": 15, "trophies": 2, "caps": 15}),
                 ("Become the undisputed main man at an ambitious club",      {"goals": 45, "assists": 18, "trophies": 1, "caps": 20}),
+                ("Accept the captain's armband and rebuild a fallen giant",      {"goals": 38, "assists": 22, "trophies": 2, "caps": 18}),
             ),
             # 3 – Breakout Season (24-26)  ← NEW
             (
@@ -901,6 +904,7 @@ def _stage_data(position_group: str) -> list:
                 "and sparked a transfer frenzy. Two life-changing paths have emerged.",
                 ("Stay and break the club scoring record before moving on",  {"goals": 38, "assists": 14, "trophies": 1, "caps": 12}),
                 ("Accept a marquee transfer and prove brilliance in a new top flight", {"goals": 30, "assists": 16, "trophies": 2, "caps": 10}),
+                ("Join a rival league abroad to prove world-class status globally", {"goals": 34, "assists": 20, "trophies": 2, "caps": 14}),
             ),
             # 4 – Peak Years (26-29)
             (
@@ -908,6 +912,7 @@ def _stage_data(position_group: str) -> list:
                 "but so does the chance to cement legendary status at a beloved club.",
                 ("Accept the mega-money move to the wealthiest club",        {"goals": 42, "assists": 22, "trophies": 3, "caps": 20}),
                 ("Stay loyal and chase the title with a beloved club",       {"goals": 55, "assists": 28, "trophies": 4, "caps": 25}),
+                ("Take an unprecedented player-captain role and drive a title from within", {"goals": 48, "assists": 25, "trophies": 3, "caps": 22}),
             ),
             # 5 – Prime Dominance (29-32)  ← NEW
             (
@@ -915,6 +920,7 @@ def _stage_data(position_group: str) -> list:
                 "a generational talent defying gravity. Two epic challenges remain.",
                 ("Lead the national team on an international mission — a World Cup or continental title", {"goals": 22, "assists": 18, "trophies": 2, "caps": 28}),
                 ("Cement club immortality with back-to-back domestic and European crowns", {"goals": 38, "assists": 24, "trophies": 4, "caps": 14}),
+                ("Accept a shock move to a rival club in the same league for a final title tilt", {"goals": 30, "assists": 20, "trophies": 3, "caps": 18}),
             ),
             # 6 – Veteran Phase (32-36)
             (
@@ -922,6 +928,7 @@ def _stage_data(position_group: str) -> list:
                 "One final chapter in the top flight remains to be written.",
                 ("Embrace a new challenge in MLS or the Saudi Pro League",   {"goals": 30, "assists": 12, "trophies": 1, "caps": 5}),
                 ("Stay in the top flight and mentor the next generation",    {"goals": 28, "assists": 18, "trophies": 2, "caps": 10}),
+                ("Return to a former club as a free agent and complete unfinished business", {"goals": 22, "assists": 15, "trophies": 2, "caps": 8}),
             ),
             # 7 – Final Chapter (36-40)  ← NEW
             (
@@ -929,6 +936,7 @@ def _stage_data(position_group: str) -> list:
                 "One final decision will shape the farewell.",
                 ("Return to the boyhood club for an emotional homecoming season", {"goals": 10, "assists": 8,  "trophies": 1, "caps": 0}),
                 ("Push on for one last trophy as a talismanic figure at a new club", {"goals": 14, "assists": 10, "trophies": 2, "caps": 0}),
+                ("Move to an emerging league to grow the sport and end the journey in style", {"goals": 12, "assists": 9,  "trophies": 1, "caps": 0}),
             ),
         ]
     elif position_group == "Midfielder":
@@ -939,6 +947,7 @@ def _stage_data(position_group: str) -> list:
                 "to midfield legends of the past.",
                 ("Train extra hours on shooting and scoring",                {"goals": 5,  "assists": 6,  "trophies": 0, "caps": 0}),
                 ("Focus on passing range, vision, and game management",      {"goals": 2,  "assists": 12, "trophies": 0, "caps": 0}),
+                ("Join an elite European academy abroad to broaden horizons",    {"goals": 3,  "assists": 9,  "trophies": 0, "caps": 0}),
             ),
             # 1 – Professional Debut (18-21)
             (
@@ -946,6 +955,7 @@ def _stage_data(position_group: str) -> list:
                 "but where to develop that talent best?",
                 ("Sign for a glamour club as a squad midfielder",            {"goals": 8,  "assists": 14, "trophies": 1, "caps": 4}),
                 ("Choose a team where {name} will be the heartbeat",         {"goals": 12, "assists": 20, "trophies": 0, "caps": 9}),
+                ("Move abroad to a Bundesliga or La Liga side for regular minutes", {"goals": 10, "assists": 16, "trophies": 0, "caps": 10}),
             ),
             # 2 – Rising Star (21-24)
             (
@@ -953,6 +963,7 @@ def _stage_data(position_group: str) -> list:
                 "A pivotal transfer window opens.",
                 ("Move to a top-four side fighting for the title",           {"goals": 18, "assists": 35, "trophies": 2, "caps": 18}),
                 ("Lead the midfield at an ambitious club building for glory",{"goals": 25, "assists": 40, "trophies": 1, "caps": 22}),
+                ("Accept a player-captain role at a rising club with ambitious owners", {"goals": 20, "assists": 38, "trophies": 2, "caps": 20}),
             ),
             # 3 – Breakout Season (24-26)  ← NEW
             (
@@ -960,6 +971,7 @@ def _stage_data(position_group: str) -> list:
                 "and two compelling opportunities have arrived simultaneously.",
                 ("Win Player of the Season and sign a bumper new deal",      {"goals": 18, "assists": 28, "trophies": 1, "caps": 14}),
                 ("Accept a high-profile move to a title contender",          {"goals": 14, "assists": 32, "trophies": 2, "caps": 10}),
+                ("Make a shock move to a continental rival to test the style in a new league", {"goals": 16, "assists": 30, "trophies": 1, "caps": 12}),
             ),
             # 4 – Peak Years (26-29)
             (
@@ -967,12 +979,14 @@ def _stage_data(position_group: str) -> list:
                 "and they're willing to pay.",
                 ("Join the historic giant and chase the Champions League",   {"goals": 22, "assists": 42, "trophies": 3, "caps": 22}),
                 ("Stay and break the all-time appearances record",           {"goals": 28, "assists": 50, "trophies": 3, "caps": 28}),
+                ("Sign for an emerging project club and help build something historic from scratch", {"goals": 24, "assists": 45, "trophies": 2, "caps": 24}),
             ),
             # 5 – Prime Dominance (29-32)  ← NEW
             (
                 "At 29, {name} is the fulcrum around which everything revolves. Captaincy beckons and legacy is being built game by game.",
                 ("Captain your club to a historic league and cup double",    {"goals": 20, "assists": 44, "trophies": 3, "caps": 20}),
                 ("Become the driving force behind your nation's deepest tournament run in decades", {"goals": 14, "assists": 38, "trophies": 2, "caps": 32}),
+                ("Take on a dual player-ambassador role for a new expansion club, combining play and growth", {"goals": 12, "assists": 32, "trophies": 1, "caps": 22}),
             ),
             # 6 – Veteran Phase (32-36)
             (
@@ -980,6 +994,7 @@ def _stage_data(position_group: str) -> list:
                 "time has taken. The question now is legacy.",
                 ("Move abroad to a new league for one last challenge",       {"goals": 12, "assists": 25, "trophies": 1, "caps": 8}),
                 ("Stay in domestic football until the very last whistle",    {"goals": 15, "assists": 30, "trophies": 2, "caps": 12}),
+                ("Relocate to a new continent — MLS or J-League — to leave a global imprint", {"goals": 10, "assists": 22, "trophies": 1, "caps": 6}),
             ),
             # 7 – Final Chapter (36-40)  ← NEW
             (
@@ -987,6 +1002,7 @@ def _stage_data(position_group: str) -> list:
                 "Where does the last chapter unfold?",
                 ("Return to the club where it all began for one last emotional season", {"goals": 8,  "assists": 20, "trophies": 1, "caps": 0}),
                 ("Accept a player-coach role to pass on a lifetime of football wisdom", {"goals": 5,  "assists": 16, "trophies": 2, "caps": 0}),
+                ("Join the coaching staff in a hybrid player-coach capacity at a beloved club", {"goals": 4,  "assists": 14, "trophies": 1, "caps": 0}),
             ),
         ]
     elif position_group == "Defender":
@@ -997,6 +1013,7 @@ def _stage_data(position_group: str) -> list:
                 "session with fearless determination.",
                 ("Develop as a ball-playing sweeper with attacking instincts",{"goals": 3, "assists": 5,  "trophies": 0, "caps": 0}),
                 ("Master the fundamentals — positioning, heading, tackling", {"goals": 1, "assists": 3,  "trophies": 1, "caps": 0}),
+                ("Trial at a foreign club and return with a new perspective on the game", {"goals": 2, "assists": 4,  "trophies": 0, "caps": 0}),
             ),
             # 1 – Professional Debut (18-21)
             (
@@ -1004,6 +1021,7 @@ def _stage_data(position_group: str) -> list:
                 "one a title contender, one desperate for defensive solidarity.",
                 ("Join the title contender as a squad defender",             {"goals": 2, "assists": 8,  "trophies": 2, "caps": 4}),
                 ("Anchor the defence at a mid-table club as undisputed no. 1",{"goals": 3, "assists": 10, "trophies": 0, "caps": 9}),
+                ("Move abroad to a league known for developing young defenders",  {"goals": 2, "assists": 9,  "trophies": 1, "caps": 6}),
             ),
             # 2 – Rising Star (21-24)
             (
@@ -1011,6 +1029,7 @@ def _stage_data(position_group: str) -> list:
                 "A powerhouse club wants to build their entire backline around this talent.",
                 ("Sign for the powerhouse — elite level, intense competition",{"goals": 5, "assists": 15, "trophies": 3, "caps": 16}),
                 ("Become the captain of a title-chasing side",               {"goals": 8, "assists": 20, "trophies": 2, "caps": 22}),
+                ("Take the captain's armband at a mid-table club with huge potential", {"goals": 6, "assists": 18, "trophies": 1, "caps": 18}),
             ),
             # 3 – Breakout Season (24-26)  ← NEW
             (
@@ -1018,6 +1037,7 @@ def _stage_data(position_group: str) -> list:
                 "Europe's elite are queuing up with proposals.",
                 ("Lead a charge deep into the Champions League as the defensive cornerstone", {"goals": 6, "assists": 16, "trophies": 2, "caps": 14}),
                 ("Sign for a rebuilding powerhouse who promise to build around {name}", {"goals": 8, "assists": 20, "trophies": 1, "caps": 10}),
+                ("Move to a rival domestic club to prove elite-level status closer to home", {"goals": 7, "assists": 18, "trophies": 2, "caps": 12}),
             ),
             # 4 – Peak Years (26-29)
             (
@@ -1025,6 +1045,7 @@ def _stage_data(position_group: str) -> list:
                 "a huge club arrives with a lavish offer.",
                 ("Join the mega-club and play in the biggest matches",       {"goals": 5, "assists": 18, "trophies": 3, "caps": 22}),
                 ("Become a club legend — captain them to an unlikely title", {"goals": 8, "assists": 22, "trophies": 4, "caps": 28}),
+                ("Spearhead a European push at an ambitious club not among the traditional elite", {"goals": 6, "assists": 20, "trophies": 3, "caps": 24}),
             ),
             # 5 – Prime Dominance (29-32)  ← NEW
             (
@@ -1032,6 +1053,7 @@ def _stage_data(position_group: str) -> list:
                 "Two landmark opportunities have emerged.",
                 ("Skipper the national team to World Cup glory",             {"goals": 4, "assists": 14, "trophies": 3, "caps": 30}),
                 ("Lead your club to an unprecedented clean-sheet record and title glory", {"goals": 7, "assists": 20, "trophies": 4, "caps": 16}),
+                ("Make a bold move abroad to a top continental league and raise the defensive bar", {"goals": 5, "assists": 16, "trophies": 3, "caps": 22}),
             ),
             # 6 – Veteran Phase (32-36)
             (
@@ -1039,6 +1061,7 @@ def _stage_data(position_group: str) -> list:
                 "compensate for any reduction in pace.",
                 ("Accept a final challenge in a top foreign league",         {"goals": 3, "assists": 10, "trophies": 1, "caps": 6}),
                 ("See out the career in the domestic top flight",            {"goals": 4, "assists": 12, "trophies": 2, "caps": 10}),
+                ("Join a young squad needing leadership and guide them to unexpected success", {"goals": 3, "assists": 11, "trophies": 2, "caps": 8}),
             ),
             # 7 – Final Chapter (36-40)  ← NEW
             (
@@ -1046,6 +1069,7 @@ def _stage_data(position_group: str) -> list:
                 "How does the legend's story end?",
                 ("Return to the community club roots for a poignant farewell season", {"goals": 2, "assists": 6,  "trophies": 1, "caps": 0}),
                 ("Carry an emerging young club into a trophy final as the experienced guardian", {"goals": 3, "assists": 8, "trophies": 2, "caps": 0}),
+                ("Move into a player-coach hybrid role to shape the next generation of defenders", {"goals": 2, "assists": 7,  "trophies": 1, "caps": 0}),
             ),
         ]
     else:  # Goalkeeper
@@ -1056,6 +1080,7 @@ def _stage_data(position_group: str) -> list:
                 "The goalkeeping coach predicted an international career from the very first training session.",
                 ("Work obsessively on shot-stopping, reflexes and positioning",{"goals": 0, "assists": 0, "trophies": 1, "caps": 0}),
                 ("Develop sweeper-keeper skills and precise distribution",    {"goals": 0, "assists": 2, "trophies": 0, "caps": 0}),
+                ("Spend a season on exchange at a foreign club's academy to broaden skills", {"goals": 0, "assists": 1, "trophies": 0, "caps": 0}),
             ),
             # 1 – Professional Debut (18-21)
             (
@@ -1063,6 +1088,7 @@ def _stage_data(position_group: str) -> list:
                 "but two very different paths are available.",
                 ("Fight for a spot at a top-flight club's first team",        {"goals": 0, "assists": 2, "trophies": 1, "caps": 3}),
                 ("Take a loan to a lower-league club for 200 games in two seasons",{"goals": 0, "assists": 4, "trophies": 0, "caps": 6}),
+                ("Move abroad early to a league known for developing young goalkeepers",     {"goals": 0, "assists": 3, "trophies": 0, "caps": 8}),
             ),
             # 2 – Rising Star (21-24)
             (
@@ -1070,6 +1096,7 @@ def _stage_data(position_group: str) -> list:
                 "Two clubs are desperate to sign them.",
                 ("Join a Champions League regular at a premium price",        {"goals": 0, "assists": 5, "trophies": 3, "caps": 16}),
                 ("Become the undisputed no. 1 at a passionate mid-table club",{"goals": 0, "assists": 8, "trophies": 2, "caps": 22}),
+                ("Take the no. 1 shirt at a newly promoted side with a passionate fanbase",  {"goals": 0, "assists": 6, "trophies": 1, "caps": 18}),
             ),
             # 3 – Breakout Season (24-26)  ← NEW
             (
@@ -1077,6 +1104,7 @@ def _stage_data(position_group: str) -> list:
                 "two landmark offers have materialised.",
                 ("Win the Golden Glove and sign a bumper new deal at your current club", {"goals": 0, "assists": 4, "trophies": 2, "caps": 14}),
                 ("Accept a transfer to a club where the Champions League is a guaranteed stage", {"goals": 0, "assists": 3, "trophies": 1, "caps": 10}),
+                ("Move to a continental rival on a short-term deal to gain Champions League experience", {"goals": 0, "assists": 3, "trophies": 2, "caps": 12}),
             ),
             # 4 – Peak Years (26-29)
             (
@@ -1084,6 +1112,7 @@ def _stage_data(position_group: str) -> list:
                 "in the world. A historic contract offer arrives.",
                 ("Sign for the wealthiest club and target every trophy",      {"goals": 0, "assists": 6, "trophies": 4, "caps": 20}),
                 ("Remain loyal and carry the beloved club to an unlikely title",{"goals": 0, "assists": 8, "trophies": 3, "caps": 26}),
+                ("Join an ambitious project club and build a dynasty from the back",          {"goals": 0, "assists": 7, "trophies": 3, "caps": 22}),
             ),
             # 5 – Prime Dominance (29-32)  ← NEW
             (
@@ -1091,6 +1120,7 @@ def _stage_data(position_group: str) -> list:
                 "Two monumental challenges beckon.",
                 ("Lead the national team to the World Cup final as the last line of defence", {"goals": 0, "assists": 4, "trophies": 2, "caps": 30}),
                 ("Mastermind a historic treble — league, cup, and Champions League in one season", {"goals": 0, "assists": 5, "trophies": 3, "caps": 14}),
+                ("Take a shock move to a different top league to test skills in a new environment", {"goals": 0, "assists": 4, "trophies": 2, "caps": 22}),
             ),
             # 6 – Veteran Phase (32-36)
             (
@@ -1098,6 +1128,7 @@ def _stage_data(position_group: str) -> list:
                 "but where?",
                 ("Move to a glamour league abroad for a new adventure",       {"goals": 0, "assists": 5, "trophies": 1, "caps": 5}),
                 ("Stay as the evergreen no. 1 in the domestic top flight",    {"goals": 0, "assists": 6, "trophies": 2, "caps": 10}),
+                ("Join a lower-league club fighting for promotion and be the difference maker", {"goals": 0, "assists": 4, "trophies": 1, "caps": 4}),
             ),
             # 7 – Final Chapter (36-40)  ← NEW
             (
@@ -1105,6 +1136,7 @@ def _stage_data(position_group: str) -> list:
                 "But the day of retirement is on the horizon. How does the final chapter read?",
                 ("Return to the club where the story began — the prodigal no. 1 comes home", {"goals": 0, "assists": 3, "trophies": 1, "caps": 0}),
                 ("Stay at the top as a shot-stopper-mentor hybrid, inspiring the next generation", {"goals": 0, "assists": 4, "trophies": 2, "caps": 0}),
+                ("Accept a player-development role at a national football centre alongside playing", {"goals": 0, "assists": 2, "trophies": 1, "caps": 0}),
             ),
         ]
 
@@ -1492,6 +1524,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 10, "trophies": 0, "players_developed": 8, "reputation": 6}),
             ("Take charge of the reserve team and target a cup run to raise the profile",
              {"wins": 18, "trophies": 1, "players_developed": 3, "reputation": 10}),
+            ("Take charge of a semi-pro club and target a shock promotion to raise your profile",
+             {"wins": 14, "trophies": 1, "players_developed": 5, "reputation": 8}),
         ),
         # 1 – Assistant Coach (35-38)
         (
@@ -1501,6 +1535,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 22, "trophies": 2, "players_developed": 4, "reputation": 16}),
             ("Take the assistant role at an ambitious lower-league club with full tactical freedom",
              {"wins": 30, "trophies": 1, "players_developed": 6, "reputation": 18}),
+            ("Accept a dual role as assistant and head of analytics at a progressive lower-league club",
+             {"wins": 26, "trophies": 1, "players_developed": 8, "reputation": 14}),
         ),
         # 2 – First Head Coach Role (38-42)
         (
@@ -1510,6 +1546,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 38, "trophies": 2, "players_developed": 5, "reputation": 22}),
             ("Earn trust by building team spirit first, then gradually introduce the philosophy",
              {"wins": 32, "trophies": 1, "players_developed": 9, "reputation": 25}),
+            ("Take over a mid-table club mid-season and mount a remarkable survival campaign",
+             {"wins": 30, "trophies": 0, "players_developed": 7, "reputation": 20}),
         ),
         # 3 – Mid-Table Manager (42-46)
         (
@@ -1519,6 +1557,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 44, "trophies": 2, "players_developed": 12, "reputation": 28}),
             ("Prioritise results and pragmatic tactics to secure European football for the first time",
              {"wins": 55, "trophies": 3, "players_developed": 5, "reputation": 32}),
+            ("Make a bold overseas move to manage a foreign club and build a continental reputation",
+             {"wins": 48, "trophies": 2, "players_developed": 8, "reputation": 30}),
         ),
         # 4 – Title Contender (46-50)
         (
@@ -1528,6 +1568,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 62, "trophies": 4, "players_developed": 8, "reputation": 38}),
             ("Target a deep Champions League run to put your name on the European map",
              {"wins": 50, "trophies": 3, "players_developed": 6, "reputation": 42}),
+            ("Shock the world by resigning to take over an underdog club and deliver a Cinderella title",
+             {"wins": 54, "trophies": 3, "players_developed": 10, "reputation": 40}),
         ),
         # 5 – Elite Club Manager (50-55)
         (
@@ -1537,6 +1579,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 80, "trophies": 5, "players_developed": 7, "reputation": 48}),
             ("Lead the club to an unprecedented Champions League triumph and become a continental legend",
              {"wins": 65, "trophies": 4, "players_developed": 6, "reputation": 55}),
+            ("Leave the elite club to take over a sleeping giant and orchestrate the greatest revival in football history",
+             {"wins": 70, "trophies": 4, "players_developed": 10, "reputation": 50}),
         ),
         # 6 – International Manager (55-60)
         (
@@ -1546,6 +1590,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 40, "trophies": 2, "players_developed": 15, "reputation": 55}),
             ("Inspire an experienced squad to an immediate major tournament triumph",
              {"wins": 35, "trophies": 3, "players_developed": 8, "reputation": 60}),
+            ("Take over a dark-horse nation and pull off the greatest international upset in tournament history",
+             {"wins": 28, "trophies": 2, "players_developed": 12, "reputation": 58}),
         ),
         # 7 – Legendary Final Chapter (60+)
         (
@@ -1555,6 +1601,8 @@ def _coach_stage_data(philosophy: str) -> list:
              {"wins": 30, "trophies": 2, "players_developed": 10, "reputation": 40}),
             ("Write football history by managing a club from the lower leagues to a trophy in record time",
              {"wins": 45, "trophies": 3, "players_developed": 18, "reputation": 50}),
+            ("Accept a Director of Football role at a top club, shaping the next generation of managers",
+             {"wins": 20, "trophies": 2, "players_developed": 20, "reputation": 45}),
         ),
     ]
 
