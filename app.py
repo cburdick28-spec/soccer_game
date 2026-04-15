@@ -2640,306 +2640,374 @@ _NFL_CAREER_STAGES = [
 
 
 def _nfl_stage_data(position_group: str) -> list:
-    """Return list of (narrative, choice_a, choice_b) tuples for 8 NFL career stages."""
+    """Return list of variant-lists for 8 NFL career stages.
+    Each stage is a list of one or more variant tuples:
+    (narrative, choice_a, choice_b, choice_c)
+    where each choice is (text, stat_delta_dict).
+    """
     if position_group == "Quarterback":
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "{name} lit up the Friday night lights as a {style}, breaking every state passing record in sight. "
                 "College recruiters were lining up before junior year was over.",
                 ("Commit early to a powerhouse program to compete for a national title",
                  {"touchdowns": 30, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose a program where you'll be the undisputed starter from day one",
                  {"touchdowns": 48, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Skip the recruiting circus and enroll early to get a head start in the system",
+                 {"touchdowns": 38, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "College scouts quickly confirmed what high school rivals already knew — {name} was special. "
                 "A {style} who could read defences like a chess grandmaster, the Heisman conversation started in sophomore year.",
                 ("Chase the national championship and build a trophy-laden college resume",
                  {"touchdowns": 64, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare early for the Draft after a record-breaking junior season",
                  {"touchdowns": 48, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Stay four years, win the Heisman, and graduate as the most prepared prospect in the class",
+                 {"touchdowns": 72, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Draft night arrived and {name}'s name echoed through the arena. Every training camp rep confirmed "
                 "this was a future franchise cornerstone, but the NFL learning curve is steep.",
                 ("Start immediately — embrace the sink-or-swim challenge as the Week 1 starter",
                  {"touchdowns": 28, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Learn from a veteran QB for a season before taking the starting job",
                  {"touchdowns": 18, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Push for the starting role mid-season after a dominant preseason",
+                 {"touchdowns": 22, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "The league was on notice. {name}'s ability to extend plays and dissect zone coverages made every "
                 "defensive coordinator lose sleep on Saturday nights.",
                 ("Sign a prove-it contract extension and silence the doubters in a playoff push",
                  {"touchdowns": 62, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
                 ("Request a trade to a contender with a stronger supporting cast",
                  {"touchdowns": 55, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Embrace the franchise quarterback role and rebuild the team around your vision",
+                 {"touchdowns": 58, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "The breakout campaign was historic. {name} led the league in passer rating, threw for 40-plus touchdowns, "
-                "and finally silenced every remaining sceptic. Two massive paths lay ahead.",
+                "and finally silenced every remaining sceptic.",
                 ("Lead the franchise deep into the playoffs — a Super Bowl run begins now",
                  {"touchdowns": 70, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
                 ("Sign a record-breaking contract extension and become the face of the league",
                  {"touchdowns": 65, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Carry the offence to an MVP award and force the league to rewrite the record books",
+                 {"touchdowns": 75, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} was operating at the very pinnacle of the position. MVPs were discussed annually, "
                 "and every deep playoff run seemed destined to end with a Lombardi Trophy.",
                 ("Win back-to-back Super Bowls and cement an all-time legacy",
                  {"touchdowns": 90, "yards": 13, "pro_bowls": 3, "super_bowls": 2}),
                 ("Sacrifice individual stats to run a system that maximises team wins",
                  {"touchdowns": 72, "yards": 11, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Dominate the regular season with historic numbers and claim a first MVP trophy",
+                 {"touchdowns": 82, "yards": 12, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 and still commanding, {name} led every film session and owned every two-minute drill. "
                 "Experience now compensated for the half-step of athleticism time had taken.",
                 ("Chase one final ring with a legitimate Super Bowl contender",
                  {"touchdowns": 68, "yards": 9, "pro_bowls": 2, "super_bowls": 1}),
                 ("Stay with the beloved franchise and mentor the next generation of signal-callers",
                  {"touchdowns": 58, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Reinvent the playing style into an elite game-manager on a championship-calibre roster",
+                 {"touchdowns": 62, "yards": 8, "pro_bowls": 1, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "Father Time waits for no quarterback, but {name} had rewritten what was possible. "
                 "One final act remained to be written before the cleats came off.",
                 ("Return to the franchise where it all started for an emotional farewell season",
                  {"touchdowns": 35, "yards": 5, "pro_bowls": 1, "super_bowls": 0}),
                 ("Join a contender as a savvy veteran and push for a storybook championship exit",
                  {"touchdowns": 42, "yards": 6, "pro_bowls": 1, "super_bowls": 1}),
-            ),
+                ("Retire on top after the greatest final season any quarterback has ever played",
+                 {"touchdowns": 38, "yards": 5, "pro_bowls": 1, "super_bowls": 0}),
+            )],
         ]
     elif position_group == "Running Back":
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "Friday nights belonged to {name}. A {style} who made varsity defenders look like they were "
                 "standing still, the offers flooded in before sophomore year ended.",
                 ("Commit to the top recruiting class and chase a national title",
                  {"touchdowns": 40, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose the program that promises immediate carries and full feature-back usage",
                  {"touchdowns": 55, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Pick the mid-major program and become an unstoppable highlight reel before the big stage",
+                 {"touchdowns": 48, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "The Heisman was handed over in a landslide. {name}'s combination of vision, burst, and physicality "
                 "made college defenders look like helpless cones on a practice field.",
                 ("Stay all four years, become a program legend, and perfect the craft",
                  {"touchdowns": 72, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare after three seasons while at the absolute peak of college form",
                  {"touchdowns": 56, "yards": 8, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Win a national championship before entering the draft as the top back in the class",
+                 {"touchdowns": 64, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Selected in the first round, {name} arrived to an expectant fanbase ready to transform "
                 "the ground game. The NFL grind was real, but the talent was undeniable.",
                 ("Take the starting role from Week 1 and earn Offensive Rookie of the Year",
                  {"touchdowns": 18, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Ease into a committee backfield and absorb the pro game for a season",
                  {"touchdowns": 10, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Become the two-down workhorse and fight through every challenge to prove the draft pick right",
+                 {"touchdowns": 14, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "{name} was racking up 1,500-yard seasons and making the Pro Bowl feel like a formality. "
                 "The league was witnessing a generational back in full flight.",
                 ("Demand a feature-back workload and chase a 2,000-yard season",
                  {"touchdowns": 44, "yards": 9, "pro_bowls": 2, "super_bowls": 0}),
                 ("Stay versatile — pass-catching duties added a new lethal dimension",
                  {"touchdowns": 36, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Focus on goal-line dominance and become the league's most feared short-yardage back",
+                 {"touchdowns": 52, "yards": 7, "pro_bowls": 1, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "The breakout campaign had stat lines that felt fictional. {name} rushed for over 2,000 yards, "
                 "scored 20-plus touchdowns, and was the undisputed best player on the planet.",
                 ("Capitalise on the monster year with a record-setting running back contract",
                  {"touchdowns": 50, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
                 ("Join a powerhouse offence as the final piece to push for a Super Bowl",
                  {"touchdowns": 42, "yards": 8, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Demand total offensive control — carries, catches, and returns — for the ultimate showcase",
+                 {"touchdowns": 46, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} was at the intersection of peak athleticism and veteran savvy. "
                 "Every carry was a masterclass in patience, power, and instinct.",
                 ("Lead the franchise to a Super Bowl and etch the name in Canton stone",
                  {"touchdowns": 52, "yards": 9, "pro_bowls": 3, "super_bowls": 1}),
                 ("Chase a second massive contract while running backs' windows remain open",
                  {"touchdowns": 48, "yards": 8, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Embrace a split-back role to extend the career while still leading the league in touchdowns",
+                 {"touchdowns": 44, "yards": 7, "pro_bowls": 2, "super_bowls": 1}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 is ancient for running backs, but {name} defied every rule. A reduced but explosive workload "
                 "kept the defence honest and the highlights coming.",
                 ("Pivot to a committee role that prolongs the career and chases rings",
                  {"touchdowns": 28, "yards": 5, "pro_bowls": 1, "super_bowls": 1}),
                 ("Sign a one-year prove-it deal and chase a final Pro Bowl appearance",
                  {"touchdowns": 24, "yards": 4, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Become a third-down specialist and red-zone weapon on a Super Bowl contender",
+                 {"touchdowns": 30, "yards": 4, "pro_bowls": 0, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "Few running backs reached 34 still contributing at an elite level. {name} was the exception "
                 "that proved every rule — and the story deserved a worthy final chapter.",
                 ("Return to the team that drafted you for a sentimental farewell season",
                  {"touchdowns": 14, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
                 ("Sign with a Super Bowl favourite as a veteran change-of-pace back for one last ring",
                  {"touchdowns": 16, "yards": 3, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Retire at the top of your game before the body forces the decision",
+                 {"touchdowns": 12, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+            )],
         ]
     elif position_group == "Wide Receiver":
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "The combination of {name}'s {style} route-running and sideline-threatening speed made "
                 "college coaches drive hundreds of miles just to watch a practice.",
                 ("Commit to a pass-heavy Air Raid programme to maximise receiving stats",
                  {"touchdowns": 38, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose a storied program with NFL pipeline pedigree to sharpen every skill",
                  {"touchdowns": 28, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Pick an under-the-radar program and dominate headlines as the nation's most electric receiver",
+                 {"touchdowns": 44, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "{name}'s route tree read like a doctoral thesis on deception. By junior year the name was "
                 "synonymous with uncoverable, and mock drafts were debating top-five or top-ten.",
                 ("Stack the Biletnikoff Award on the resume with a record-breaking senior season",
                  {"touchdowns": 66, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare early and begin turning elite college tape into an NFL contract",
                  {"touchdowns": 50, "yards": 8, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Lead the team to the national championship and go out as the most decorated receiver in history",
+                 {"touchdowns": 58, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Selected in the first round and handed a number jersey already selling merchandise, "
                 "{name} arrived to immediate expectations. The NFL cornerbacks were the sternest test yet.",
                 ("Attack the starting role aggressively — WR1 from the jump",
                  {"touchdowns": 12, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Build chemistry with the QB over a full season to develop a telepathic connection",
                  {"touchdowns": 8, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Dominate in the slot and become the safest pair of hands in the entire offence",
+                 {"touchdowns": 10, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "1,200-yard seasons and double-digit touchdowns had become the baseline expectation. "
                 "{name} was making Pro Bowl appearances look like a formality.",
                 ("Demand WR1 usage and a top-of-market extension at the position",
                  {"touchdowns": 30, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
                 ("Accept a secondary role on a loaded contender to chase a Super Bowl early",
                  {"touchdowns": 22, "yards": 6, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Become the team's undisputed go-to target in fourth quarter situations",
+                 {"touchdowns": 26, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "The breakout year cemented the case for best receiver in football. {name} posted "
                 "a 100-catch, 1,600-yard, 14-touchdown campaign that left cornerbacks humbled.",
                 ("Sign a record-breaking wide receiver contract and raise the position's market",
                  {"touchdowns": 36, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
                 ("Join an elite quarterback to build an all-time passing duo",
                  {"touchdowns": 40, "yards": 10, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Prove the breakout was no fluke with an even better second season",
+                 {"touchdowns": 42, "yards": 12, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} owned every cornerback matchup on the planet. Route-running had become "
                 "an art form and the touchdowns were arriving in highlight packages every Sunday.",
                 ("Chase back-to-back Super Bowl rings as the top offensive weapon",
                  {"touchdowns": 48, "yards": 12, "pro_bowls": 3, "super_bowls": 2}),
                 ("Win an offensive MVP and become the face of the highest-scoring offence in history",
                  {"touchdowns": 54, "yards": 14, "pro_bowls": 3, "super_bowls": 0}),
-            ),
+                ("Lead the league in receiving yards for three straight seasons and rewrite the record books",
+                 {"touchdowns": 44, "yards": 15, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 and still separating at will, {name} had evolved from a speed merchant into "
                 "the most intelligent route runner in the game. Younger defenders were in a classroom.",
                 ("Mentor a rising receiver alongside regular starting duties",
                  {"touchdowns": 30, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
                 ("Chase one final big contract while the production still justifies it",
                  {"touchdowns": 26, "yards": 7, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Move to the slot full-time and become the craftiest third-down specialist in the game",
+                 {"touchdowns": 22, "yards": 6, "pro_bowls": 1, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "The journey that started under Friday night lights was nearing its final act. "
                 "{name}'s hands and savvy remained elite even as the recovery days got longer.",
                 ("Return to the franchise where the legacy was built for one last season",
                  {"touchdowns": 14, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
                 ("Join a Super Bowl contender as a veteran leader for one storybook ring",
                  {"touchdowns": 16, "yards": 4, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Go out on your own terms with a final 1,000-yard season that silences any doubters",
+                 {"touchdowns": 12, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
+            )],
         ]
     else:  # Defender
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "{name} was a {style} nightmare for every opposing offence from the very first kick-off. "
                 "College recruiters called it the most dominant high-school defensive performance in a decade.",
                 ("Join a powerhouse programme known for producing NFL defensive talent",
                  {"touchdowns": 5, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose a programme where you'll be the defensive centrepiece from day one",
                  {"touchdowns": 8, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Attend the school with the most aggressive defensive scheme to sharpen every instinct",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "The Butkus and Bednarik Award committees were watching every snap. {name} was turning "
                 "college offences into a personal highlight reel — sacks, picks, and forced fumbles galore.",
                 ("Stay all four years to win the Butkus Award and complete a degree",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare early with the highest defensive prospect grade in the class",
                  {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Win the national championship and leave as the most decorated defender in program history",
+                 {"touchdowns": 8, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Drafted in the top ten, {name} arrived to a defence hungry for a difference-maker. "
                 "The learning curve was real — but the impact was immediate.",
                 ("Start immediately and earn Defensive Rookie of the Year",
                  {"touchdowns": 4, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
                 ("Come off the bench and absorb the complexity of the professional game for a season",
                  {"touchdowns": 2, "yards": 0, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Rotate in at key moments and make enough splash plays to force the coaching staff's hand",
+                 {"touchdowns": 3, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "Quarterbacks were checking down before {name} could even get out of their stance. "
                 "The annual Pro Bowl invitations were becoming a formality.",
                 ("Anchor the defence as the defensive captain and chase a Defensive Player of the Year award",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
                 ("Request a move to a defensive powerhouse scheme that maximises every strength",
                  {"touchdowns": 8, "yards": 2, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Become the most feared blitzer in the league and terrorise quarterbacks on every down",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "Defensive Player of the Year. The award was unanimous and deserved. "
                 "{name}'s season-long dominance had completely altered how the opposition game-planned.",
                 ("Win a Super Bowl as the anchor of the league's most feared defence",
                  {"touchdowns": 12, "yards": 2, "pro_bowls": 2, "super_bowls": 1}),
                 ("Sign a record-breaking defensive contract and become the highest-paid player at the position",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Carry the defence to the playoffs single-handedly and prove no offence can handle you",
+                 {"touchdowns": 8, "yards": 2, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} was the last piece any Super Bowl contender wanted to face. "
                 "Every play call began with a plan to account for the defensive nightmare on the field.",
                 ("Lead a dynasty defence to back-to-back championships",
                  {"touchdowns": 14, "yards": 3, "pro_bowls": 3, "super_bowls": 2}),
                 ("Become the defensive cornerstone of a franchise rebuild and lift a long-suffering fanbase",
                  {"touchdowns": 12, "yards": 2, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Win a second Defensive Player of the Year award and make the case for greatest of all time",
+                 {"touchdowns": 10, "yards": 2, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 and still causing chaos on every play. {name}'s football IQ and film study had become "
                 "almost supernatural — anticipating plays before the snap.",
                 ("Pivot to a mentoring role while still starting and chasing one more ring",
                  {"touchdowns": 8, "yards": 1, "pro_bowls": 1, "super_bowls": 1}),
                 ("Chase a final Defensive Player of the Year award to bookend an elite career",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Join a championship contender and bring veteran leadership to a young hungry defence",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 1, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "The career that had terrorised quarterbacks and running backs across two decades was "
                 "drawing to a close. {name}'s farewell would be written on the biggest stage possible.",
                 ("Return to the city where the legend was born for a final home-crowd goodbye",
                  {"touchdowns": 4, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
                 ("Sign with a Super Bowl contender and chase one last ring before hanging up the pads",
                  {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Retire as the undisputed greatest defensive player of your era with one final dominant season",
+                 {"touchdowns": 5, "yards": 1, "pro_bowls": 1, "super_bowls": 0}),
+            )],
         ]
 
 
