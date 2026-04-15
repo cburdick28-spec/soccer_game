@@ -2640,306 +2640,374 @@ _NFL_CAREER_STAGES = [
 
 
 def _nfl_stage_data(position_group: str) -> list:
-    """Return list of (narrative, choice_a, choice_b) tuples for 8 NFL career stages."""
+    """Return list of variant-lists for 8 NFL career stages.
+    Each stage is a list of one or more variant tuples:
+    (narrative, choice_a, choice_b, choice_c)
+    where each choice is (text, stat_delta_dict).
+    """
     if position_group == "Quarterback":
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "{name} lit up the Friday night lights as a {style}, breaking every state passing record in sight. "
                 "College recruiters were lining up before junior year was over.",
                 ("Commit early to a powerhouse program to compete for a national title",
                  {"touchdowns": 30, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose a program where you'll be the undisputed starter from day one",
                  {"touchdowns": 48, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Skip the recruiting circus and enroll early to get a head start in the system",
+                 {"touchdowns": 38, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "College scouts quickly confirmed what high school rivals already knew — {name} was special. "
                 "A {style} who could read defences like a chess grandmaster, the Heisman conversation started in sophomore year.",
                 ("Chase the national championship and build a trophy-laden college resume",
                  {"touchdowns": 64, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare early for the Draft after a record-breaking junior season",
                  {"touchdowns": 48, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Stay four years, win the Heisman, and graduate as the most prepared prospect in the class",
+                 {"touchdowns": 72, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Draft night arrived and {name}'s name echoed through the arena. Every training camp rep confirmed "
                 "this was a future franchise cornerstone, but the NFL learning curve is steep.",
                 ("Start immediately — embrace the sink-or-swim challenge as the Week 1 starter",
                  {"touchdowns": 28, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Learn from a veteran QB for a season before taking the starting job",
                  {"touchdowns": 18, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Push for the starting role mid-season after a dominant preseason",
+                 {"touchdowns": 22, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "The league was on notice. {name}'s ability to extend plays and dissect zone coverages made every "
                 "defensive coordinator lose sleep on Saturday nights.",
                 ("Sign a prove-it contract extension and silence the doubters in a playoff push",
                  {"touchdowns": 62, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
                 ("Request a trade to a contender with a stronger supporting cast",
                  {"touchdowns": 55, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Embrace the franchise quarterback role and rebuild the team around your vision",
+                 {"touchdowns": 58, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "The breakout campaign was historic. {name} led the league in passer rating, threw for 40-plus touchdowns, "
-                "and finally silenced every remaining sceptic. Two massive paths lay ahead.",
+                "and finally silenced every remaining sceptic.",
                 ("Lead the franchise deep into the playoffs — a Super Bowl run begins now",
                  {"touchdowns": 70, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
                 ("Sign a record-breaking contract extension and become the face of the league",
                  {"touchdowns": 65, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Carry the offence to an MVP award and force the league to rewrite the record books",
+                 {"touchdowns": 75, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} was operating at the very pinnacle of the position. MVPs were discussed annually, "
                 "and every deep playoff run seemed destined to end with a Lombardi Trophy.",
                 ("Win back-to-back Super Bowls and cement an all-time legacy",
                  {"touchdowns": 90, "yards": 13, "pro_bowls": 3, "super_bowls": 2}),
                 ("Sacrifice individual stats to run a system that maximises team wins",
                  {"touchdowns": 72, "yards": 11, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Dominate the regular season with historic numbers and claim a first MVP trophy",
+                 {"touchdowns": 82, "yards": 12, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 and still commanding, {name} led every film session and owned every two-minute drill. "
                 "Experience now compensated for the half-step of athleticism time had taken.",
                 ("Chase one final ring with a legitimate Super Bowl contender",
                  {"touchdowns": 68, "yards": 9, "pro_bowls": 2, "super_bowls": 1}),
                 ("Stay with the beloved franchise and mentor the next generation of signal-callers",
                  {"touchdowns": 58, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Reinvent the playing style into an elite game-manager on a championship-calibre roster",
+                 {"touchdowns": 62, "yards": 8, "pro_bowls": 1, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "Father Time waits for no quarterback, but {name} had rewritten what was possible. "
                 "One final act remained to be written before the cleats came off.",
                 ("Return to the franchise where it all started for an emotional farewell season",
                  {"touchdowns": 35, "yards": 5, "pro_bowls": 1, "super_bowls": 0}),
                 ("Join a contender as a savvy veteran and push for a storybook championship exit",
                  {"touchdowns": 42, "yards": 6, "pro_bowls": 1, "super_bowls": 1}),
-            ),
+                ("Retire on top after the greatest final season any quarterback has ever played",
+                 {"touchdowns": 38, "yards": 5, "pro_bowls": 1, "super_bowls": 0}),
+            )],
         ]
     elif position_group == "Running Back":
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "Friday nights belonged to {name}. A {style} who made varsity defenders look like they were "
                 "standing still, the offers flooded in before sophomore year ended.",
                 ("Commit to the top recruiting class and chase a national title",
                  {"touchdowns": 40, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose the program that promises immediate carries and full feature-back usage",
                  {"touchdowns": 55, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Pick the mid-major program and become an unstoppable highlight reel before the big stage",
+                 {"touchdowns": 48, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "The Heisman was handed over in a landslide. {name}'s combination of vision, burst, and physicality "
                 "made college defenders look like helpless cones on a practice field.",
                 ("Stay all four years, become a program legend, and perfect the craft",
                  {"touchdowns": 72, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare after three seasons while at the absolute peak of college form",
                  {"touchdowns": 56, "yards": 8, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Win a national championship before entering the draft as the top back in the class",
+                 {"touchdowns": 64, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Selected in the first round, {name} arrived to an expectant fanbase ready to transform "
                 "the ground game. The NFL grind was real, but the talent was undeniable.",
                 ("Take the starting role from Week 1 and earn Offensive Rookie of the Year",
                  {"touchdowns": 18, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Ease into a committee backfield and absorb the pro game for a season",
                  {"touchdowns": 10, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Become the two-down workhorse and fight through every challenge to prove the draft pick right",
+                 {"touchdowns": 14, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "{name} was racking up 1,500-yard seasons and making the Pro Bowl feel like a formality. "
                 "The league was witnessing a generational back in full flight.",
                 ("Demand a feature-back workload and chase a 2,000-yard season",
                  {"touchdowns": 44, "yards": 9, "pro_bowls": 2, "super_bowls": 0}),
                 ("Stay versatile — pass-catching duties added a new lethal dimension",
                  {"touchdowns": 36, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Focus on goal-line dominance and become the league's most feared short-yardage back",
+                 {"touchdowns": 52, "yards": 7, "pro_bowls": 1, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "The breakout campaign had stat lines that felt fictional. {name} rushed for over 2,000 yards, "
                 "scored 20-plus touchdowns, and was the undisputed best player on the planet.",
                 ("Capitalise on the monster year with a record-setting running back contract",
                  {"touchdowns": 50, "yards": 10, "pro_bowls": 2, "super_bowls": 0}),
                 ("Join a powerhouse offence as the final piece to push for a Super Bowl",
                  {"touchdowns": 42, "yards": 8, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Demand total offensive control — carries, catches, and returns — for the ultimate showcase",
+                 {"touchdowns": 46, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} was at the intersection of peak athleticism and veteran savvy. "
                 "Every carry was a masterclass in patience, power, and instinct.",
                 ("Lead the franchise to a Super Bowl and etch the name in Canton stone",
                  {"touchdowns": 52, "yards": 9, "pro_bowls": 3, "super_bowls": 1}),
                 ("Chase a second massive contract while running backs' windows remain open",
                  {"touchdowns": 48, "yards": 8, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Embrace a split-back role to extend the career while still leading the league in touchdowns",
+                 {"touchdowns": 44, "yards": 7, "pro_bowls": 2, "super_bowls": 1}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 is ancient for running backs, but {name} defied every rule. A reduced but explosive workload "
                 "kept the defence honest and the highlights coming.",
                 ("Pivot to a committee role that prolongs the career and chases rings",
                  {"touchdowns": 28, "yards": 5, "pro_bowls": 1, "super_bowls": 1}),
                 ("Sign a one-year prove-it deal and chase a final Pro Bowl appearance",
                  {"touchdowns": 24, "yards": 4, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Become a third-down specialist and red-zone weapon on a Super Bowl contender",
+                 {"touchdowns": 30, "yards": 4, "pro_bowls": 0, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "Few running backs reached 34 still contributing at an elite level. {name} was the exception "
                 "that proved every rule — and the story deserved a worthy final chapter.",
                 ("Return to the team that drafted you for a sentimental farewell season",
                  {"touchdowns": 14, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
                 ("Sign with a Super Bowl favourite as a veteran change-of-pace back for one last ring",
                  {"touchdowns": 16, "yards": 3, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Retire at the top of your game before the body forces the decision",
+                 {"touchdowns": 12, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+            )],
         ]
     elif position_group == "Wide Receiver":
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "The combination of {name}'s {style} route-running and sideline-threatening speed made "
                 "college coaches drive hundreds of miles just to watch a practice.",
                 ("Commit to a pass-heavy Air Raid programme to maximise receiving stats",
                  {"touchdowns": 38, "yards": 6, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose a storied program with NFL pipeline pedigree to sharpen every skill",
                  {"touchdowns": 28, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Pick an under-the-radar program and dominate headlines as the nation's most electric receiver",
+                 {"touchdowns": 44, "yards": 7, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "{name}'s route tree read like a doctoral thesis on deception. By junior year the name was "
                 "synonymous with uncoverable, and mock drafts were debating top-five or top-ten.",
                 ("Stack the Biletnikoff Award on the resume with a record-breaking senior season",
                  {"touchdowns": 66, "yards": 10, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare early and begin turning elite college tape into an NFL contract",
                  {"touchdowns": 50, "yards": 8, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Lead the team to the national championship and go out as the most decorated receiver in history",
+                 {"touchdowns": 58, "yards": 9, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Selected in the first round and handed a number jersey already selling merchandise, "
                 "{name} arrived to immediate expectations. The NFL cornerbacks were the sternest test yet.",
                 ("Attack the starting role aggressively — WR1 from the jump",
                  {"touchdowns": 12, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
                 ("Build chemistry with the QB over a full season to develop a telepathic connection",
                  {"touchdowns": 8, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Dominate in the slot and become the safest pair of hands in the entire offence",
+                 {"touchdowns": 10, "yards": 4, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "1,200-yard seasons and double-digit touchdowns had become the baseline expectation. "
                 "{name} was making Pro Bowl appearances look like a formality.",
                 ("Demand WR1 usage and a top-of-market extension at the position",
                  {"touchdowns": 30, "yards": 9, "pro_bowls": 1, "super_bowls": 0}),
                 ("Accept a secondary role on a loaded contender to chase a Super Bowl early",
                  {"touchdowns": 22, "yards": 6, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Become the team's undisputed go-to target in fourth quarter situations",
+                 {"touchdowns": 26, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "The breakout year cemented the case for best receiver in football. {name} posted "
                 "a 100-catch, 1,600-yard, 14-touchdown campaign that left cornerbacks humbled.",
                 ("Sign a record-breaking wide receiver contract and raise the position's market",
                  {"touchdowns": 36, "yards": 11, "pro_bowls": 2, "super_bowls": 0}),
                 ("Join an elite quarterback to build an all-time passing duo",
                  {"touchdowns": 40, "yards": 10, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Prove the breakout was no fluke with an even better second season",
+                 {"touchdowns": 42, "yards": 12, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} owned every cornerback matchup on the planet. Route-running had become "
                 "an art form and the touchdowns were arriving in highlight packages every Sunday.",
                 ("Chase back-to-back Super Bowl rings as the top offensive weapon",
                  {"touchdowns": 48, "yards": 12, "pro_bowls": 3, "super_bowls": 2}),
                 ("Win an offensive MVP and become the face of the highest-scoring offence in history",
                  {"touchdowns": 54, "yards": 14, "pro_bowls": 3, "super_bowls": 0}),
-            ),
+                ("Lead the league in receiving yards for three straight seasons and rewrite the record books",
+                 {"touchdowns": 44, "yards": 15, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 and still separating at will, {name} had evolved from a speed merchant into "
                 "the most intelligent route runner in the game. Younger defenders were in a classroom.",
                 ("Mentor a rising receiver alongside regular starting duties",
                  {"touchdowns": 30, "yards": 8, "pro_bowls": 1, "super_bowls": 0}),
                 ("Chase one final big contract while the production still justifies it",
                  {"touchdowns": 26, "yards": 7, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Move to the slot full-time and become the craftiest third-down specialist in the game",
+                 {"touchdowns": 22, "yards": 6, "pro_bowls": 1, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "The journey that started under Friday night lights was nearing its final act. "
                 "{name}'s hands and savvy remained elite even as the recovery days got longer.",
                 ("Return to the franchise where the legacy was built for one last season",
                  {"touchdowns": 14, "yards": 3, "pro_bowls": 0, "super_bowls": 0}),
                 ("Join a Super Bowl contender as a veteran leader for one storybook ring",
                  {"touchdowns": 16, "yards": 4, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Go out on your own terms with a final 1,000-yard season that silences any doubters",
+                 {"touchdowns": 12, "yards": 5, "pro_bowls": 0, "super_bowls": 0}),
+            )],
         ]
     else:  # Defender
         return [
             # 0 – High School Star (16-18)
-            (
+            [(
                 "{name} was a {style} nightmare for every opposing offence from the very first kick-off. "
                 "College recruiters called it the most dominant high-school defensive performance in a decade.",
                 ("Join a powerhouse programme known for producing NFL defensive talent",
                  {"touchdowns": 5, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
                 ("Choose a programme where you'll be the defensive centrepiece from day one",
                  {"touchdowns": 8, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Attend the school with the most aggressive defensive scheme to sharpen every instinct",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 1 – College Career (18-22)
-            (
+            [(
                 "The Butkus and Bednarik Award committees were watching every snap. {name} was turning "
                 "college offences into a personal highlight reel — sacks, picks, and forced fumbles galore.",
                 ("Stay all four years to win the Butkus Award and complete a degree",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
                 ("Declare early with the highest defensive prospect grade in the class",
                  {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Win the national championship and leave as the most decorated defender in program history",
+                 {"touchdowns": 8, "yards": 2, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 2 – NFL Draft & Rookie Year (22-23)
-            (
+            [(
                 "Drafted in the top ten, {name} arrived to a defence hungry for a difference-maker. "
                 "The learning curve was real — but the impact was immediate.",
                 ("Start immediately and earn Defensive Rookie of the Year",
                  {"touchdowns": 4, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
                 ("Come off the bench and absorb the complexity of the professional game for a season",
                  {"touchdowns": 2, "yards": 0, "pro_bowls": 0, "super_bowls": 0}),
-            ),
+                ("Rotate in at key moments and make enough splash plays to force the coaching staff's hand",
+                 {"touchdowns": 3, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
+            )],
             # 3 – Rising Star (23-25)
-            (
+            [(
                 "Quarterbacks were checking down before {name} could even get out of their stance. "
                 "The annual Pro Bowl invitations were becoming a formality.",
                 ("Anchor the defence as the defensive captain and chase a Defensive Player of the Year award",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
                 ("Request a move to a defensive powerhouse scheme that maximises every strength",
                  {"touchdowns": 8, "yards": 2, "pro_bowls": 1, "super_bowls": 0}),
-            ),
+                ("Become the most feared blitzer in the league and terrorise quarterbacks on every down",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 2, "super_bowls": 0}),
+            )],
             # 4 – Breakout Season (25-27)
-            (
+            [(
                 "Defensive Player of the Year. The award was unanimous and deserved. "
                 "{name}'s season-long dominance had completely altered how the opposition game-planned.",
                 ("Win a Super Bowl as the anchor of the league's most feared defence",
                  {"touchdowns": 12, "yards": 2, "pro_bowls": 2, "super_bowls": 1}),
                 ("Sign a record-breaking defensive contract and become the highest-paid player at the position",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Carry the defence to the playoffs single-handedly and prove no offence can handle you",
+                 {"touchdowns": 8, "yards": 2, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 5 – Peak Years (27-30)
-            (
+            [(
                 "At 27, {name} was the last piece any Super Bowl contender wanted to face. "
                 "Every play call began with a plan to account for the defensive nightmare on the field.",
                 ("Lead a dynasty defence to back-to-back championships",
                  {"touchdowns": 14, "yards": 3, "pro_bowls": 3, "super_bowls": 2}),
                 ("Become the defensive cornerstone of a franchise rebuild and lift a long-suffering fanbase",
                  {"touchdowns": 12, "yards": 2, "pro_bowls": 2, "super_bowls": 1}),
-            ),
+                ("Win a second Defensive Player of the Year award and make the case for greatest of all time",
+                 {"touchdowns": 10, "yards": 2, "pro_bowls": 3, "super_bowls": 0}),
+            )],
             # 6 – Veteran Phase (30-34)
-            (
+            [(
                 "30 and still causing chaos on every play. {name}'s football IQ and film study had become "
                 "almost supernatural — anticipating plays before the snap.",
                 ("Pivot to a mentoring role while still starting and chasing one more ring",
                  {"touchdowns": 8, "yards": 1, "pro_bowls": 1, "super_bowls": 1}),
                 ("Chase a final Defensive Player of the Year award to bookend an elite career",
                  {"touchdowns": 10, "yards": 2, "pro_bowls": 2, "super_bowls": 0}),
-            ),
+                ("Join a championship contender and bring veteran leadership to a young hungry defence",
+                 {"touchdowns": 6, "yards": 1, "pro_bowls": 1, "super_bowls": 1}),
+            )],
             # 7 – Final Chapter (34-38)
-            (
+            [(
                 "The career that had terrorised quarterbacks and running backs across two decades was "
                 "drawing to a close. {name}'s farewell would be written on the biggest stage possible.",
                 ("Return to the city where the legend was born for a final home-crowd goodbye",
                  {"touchdowns": 4, "yards": 1, "pro_bowls": 0, "super_bowls": 0}),
                 ("Sign with a Super Bowl contender and chase one last ring before hanging up the pads",
                  {"touchdowns": 6, "yards": 1, "pro_bowls": 0, "super_bowls": 1}),
-            ),
+                ("Retire as the undisputed greatest defensive player of your era with one final dominant season",
+                 {"touchdowns": 5, "yards": 1, "pro_bowls": 1, "super_bowls": 0}),
+            )],
         ]
 
 
@@ -3294,80 +3362,100 @@ _NFL_COACH_STAGES = [
 
 
 def _nfl_coach_stage_data(philosophy: str) -> list:
-    """Return list of (narrative, choice_a, choice_b) tuples for 8 NFL coaching stages."""
+    """Return list of variant-lists for 8 NFL coaching stages.
+    Each stage is a list of one or more variant tuples:
+    (narrative, choice_a, choice_b, choice_c)
+    where each choice is (text, stat_delta_dict).
+    """
     return [
         # 0 – Position Coach (28-33)
-        (
+        [(
             "After retiring, {name} took a quality-control position and quickly impressed the staff with "
             "a deep understanding of the game. The {philosophy} philosophy began taking shape on the whiteboard.",
             ("Coach the skill positions and build a reputation developing young talent",
              {"wins": 0, "super_bowls": 0, "players_developed": 8, "reputation": 8}),
             ("Focus on special teams coordination to get a full-unit coaching role immediately",
              {"wins": 0, "super_bowls": 0, "players_developed": 3, "reputation": 12}),
-        ),
+            ("Volunteer as a defensive quality-control assistant and earn a full-time role ahead of schedule",
+             {"wins": 0, "super_bowls": 0, "players_developed": 5, "reputation": 10}),
+        )],
         # 1 – Coordinator (33-38)
-        (
+        [(
             "The head coach noticed the brilliance on the practice field and in the film room. "
             "{name} was promoted to coordinator — the real proving ground for future head coaches.",
             ("Accept an offensive coordinator role at a high-profile franchise with a star quarterback",
              {"wins": 35, "super_bowls": 0, "players_developed": 6, "reputation": 20}),
             ("Take a defensive coordinator role with full scheme authority at an ambitious team",
              {"wins": 28, "super_bowls": 0, "players_developed": 8, "reputation": 22}),
-        ),
+            ("Interview for and land a coordinator job at a rebuilding team with total playcalling freedom",
+             {"wins": 22, "super_bowls": 0, "players_developed": 10, "reputation": 18}),
+        )],
         # 2 – First Head Coach Role (38-42)
-        (
+        [(
             "The call came on a Tuesday morning in January. {name} was a head coach in the National Football League. "
             "The {philosophy} system was installed from the first OTA — but building a winning culture takes time.",
             ("Install the system boldly and demand immediate buy-in from veterans",
              {"wins": 30, "super_bowls": 0, "players_developed": 5, "reputation": 24}),
             ("Build trust through the locker room first, then gradually impose the full philosophy",
              {"wins": 26, "super_bowls": 0, "players_developed": 10, "reputation": 28}),
-        ),
+            ("Make a splash in free agency to accelerate buy-in and show the roster you mean business",
+             {"wins": 28, "super_bowls": 0, "players_developed": 6, "reputation": 26}),
+        )],
         # 3 – Rebuilding a Franchise (42-46)
-        (
+        [(
             "A struggling franchise came calling with a mandate to rebuild from the ground up. "
             "{name} took the challenge — turning a losing culture around is the ultimate test of any head coach.",
             ("Go all-in on the NFL Draft and develop homegrown stars over a three-year plan",
              {"wins": 32, "super_bowls": 0, "players_developed": 14, "reputation": 30}),
             ("Use free agency aggressively to fast-track the rebuild and reach the playoffs",
              {"wins": 42, "super_bowls": 0, "players_developed": 5, "reputation": 34}),
-        ),
+            ("Blend draft picks and smart veteran signings to build a balanced competitive roster",
+             {"wins": 36, "super_bowls": 0, "players_developed": 9, "reputation": 32}),
+        )],
         # 4 – Playoff Contender (46-50)
-        (
+        [(
             "The rebuild was complete. {name}'s roster was now playoff-calibre, and the fanbase "
             "was buzzing with Super Bowl energy for the first time in years.",
             ("Make a deep playoff run — win the division and host a postseason game",
              {"wins": 50, "super_bowls": 0, "players_developed": 8, "reputation": 38}),
             ("Target the AFC/NFC championship with an aggressive in-season trade",
              {"wins": 44, "super_bowls": 0, "players_developed": 5, "reputation": 44}),
-        ),
+            ("Stay disciplined, play the long game, and peak perfectly for the postseason",
+             {"wins": 46, "super_bowls": 0, "players_developed": 7, "reputation": 40}),
+        )],
         # 5 – Super Bowl Run (50-54)
-        (
+        [(
             "A Super Bowl contender at last. {name}'s {philosophy} system was operating at full efficiency, "
             "and the squad had the firepower to go all the way.",
             ("Win the Super Bowl and cement a place among the coaching greats",
              {"wins": 52, "super_bowls": 1, "players_developed": 6, "reputation": 52}),
             ("Build the infrastructure for sustained excellence — roster depth over one-season glory",
              {"wins": 44, "super_bowls": 0, "players_developed": 10, "reputation": 48}),
-        ),
+            ("Pursue the Super Bowl while simultaneously developing the next core of franchise talent",
+             {"wins": 48, "super_bowls": 1, "players_developed": 8, "reputation": 50}),
+        )],
         # 6 – Dynasty Builder (54-58)
-        (
+        [(
             "Back-to-back Super Bowl windows opened as {name} had assembled a dynasty-level roster. "
             "Only the greatest coaches in NFL history had achieved what was now within reach.",
             ("Win consecutive Super Bowls and become the face of the modern NFL",
              {"wins": 60, "super_bowls": 2, "players_developed": 8, "reputation": 60}),
             ("Prioritise developing the next generation of stars alongside continuing to win",
              {"wins": 48, "super_bowls": 1, "players_developed": 18, "reputation": 55}),
-        ),
+            ("Mastermind a third Super Bowl victory and write yourself into the pantheon of coaching legends",
+             {"wins": 55, "super_bowls": 2, "players_developed": 10, "reputation": 62}),
+        )],
         # 7 – Legacy Chapter (58+)
-        (
+        [(
             "At 58, {name}'s legacy was already etched into NFL history. "
             "But one final chapter remained — a chance to be remembered as the greatest coach of all time.",
             ("Return to a beloved former team for an emotional reunion and a final championship push",
              {"wins": 30, "super_bowls": 1, "players_developed": 10, "reputation": 45}),
             ("Take over a first-time Super Bowl contender and deliver the ultimate storybook ending",
              {"wins": 40, "super_bowls": 2, "players_developed": 12, "reputation": 55}),
-        ),
+            ("Retire on top with one final dominant season that cements the greatest coaching legacy of all time",
+             {"wins": 35, "super_bowls": 1, "players_developed": 8, "reputation": 50}),
+        )],
     ]
 
 
@@ -3722,384 +3810,466 @@ _NBA_CAREER_STAGES = [
 
 
 def _nba_stage_data(position_group: str) -> list:
-    """Return list of (narrative, choice_a, choice_b) tuples for 8 NBA career stages.
-    Each choice is (text: str, stat_delta: dict) where stats are:
+    """Return list of variant-lists for 8 NBA career stages.
+    Each stage is a list of one or more variant tuples:
+    (narrative, choice_a, choice_b, choice_c)
+    where each choice is (text: str, stat_delta: dict) and stats are:
       points, rebounds, assists, all_stars, championships.
     """
     if position_group == "Point Guard":
         return [
             # 0 – High School Phenom (16-18)
-            (
+            [(
                 "{name} was the talk of every grassroots circuit, a {style} who saw the floor like a chess "
                 "grandmaster at 16. The recruitment letters filled two bookshelves before junior year was over.",
                 ("Commit to a powerhouse program to chase a national championship",
                  {"points": 600, "rebounds": 150, "assists": 400, "all_stars": 0, "championships": 0}),
                 ("Choose a program where you'll be the undisputed starter from day one",
                  {"points": 900, "rebounds": 200, "assists": 650, "all_stars": 0, "championships": 0}),
-            ),
+                ("Pick the mid-major program and dominate every stat sheet before the big stage calls",
+                 {"points": 750, "rebounds": 175, "assists": 520, "all_stars": 0, "championships": 0}),
+            )],
             # 1 – College / Pre-Draft (18-21)
-            (
+            [(
                 "Within weeks of arriving on campus, {name} had rewritten the freshman record book. "
                 "A {style} who turned assists into art, NBA scouts circled every single game.",
                 ("Stay all three years, polish every weakness, and lead the program to March glory",
                  {"points": 1200, "rebounds": 300, "assists": 900, "all_stars": 0, "championships": 0}),
                 ("Declare for the Draft after two dominant seasons at the peak of college form",
                  {"points": 900, "rebounds": 200, "assists": 700, "all_stars": 0, "championships": 0}),
-            ),
+                ("Win the national championship before entering the draft as the consensus best point guard",
+                 {"points": 1050, "rebounds": 250, "assists": 800, "all_stars": 0, "championships": 0}),
+            )],
             # 2 – NBA Draft & Rookie Year (21-22)
-            (
+            [(
                 "Draft night made it official. {name} was called to the stage and handed a jersey in front of "
                 "a thunderous arena. The vision and IQ translated to the NBA immediately.",
-                ("Start from day one \u2014 embrace the Rookie of the Year race and command the offense",
+                ("Start from day one — embrace the Rookie of the Year race and command the offense",
                  {"points": 1400, "rebounds": 200, "assists": 600, "all_stars": 0, "championships": 0}),
                 ("Come off the bench, absorb the league, and earn the starting job by the All-Star break",
                  {"points": 900, "rebounds": 150, "assists": 450, "all_stars": 0, "championships": 0}),
-            ),
+                ("Push for minutes as the sixth man and make an instant impact with explosive performances",
+                 {"points": 1100, "rebounds": 175, "assists": 520, "all_stars": 0, "championships": 0}),
+            )],
             # 3 – Rising Star (22-24)
-            (
+            [(
                 "The league was put on notice. {name}'s pick-and-roll execution and pinpoint passing had "
                 "defensive coordinators sweating. The first All-Star conversation started in the barbershops.",
                 ("Sign a prove-it extension and bet on yourself during a playoff push",
                  {"points": 2000, "rebounds": 350, "assists": 1100, "all_stars": 1, "championships": 0}),
                 ("Request a trade to a contender and show the league you can run a winning team",
                  {"points": 1800, "rebounds": 300, "assists": 900, "all_stars": 0, "championships": 0}),
-            ),
+                ("Embrace the franchise point guard role and lead a young squad to an unexpected playoff run",
+                 {"points": 1900, "rebounds": 320, "assists": 1000, "all_stars": 1, "championships": 0}),
+            )],
             # 4 – Breakout Season (24-26)
-            (
+            [(
                 "The breakout arrived in spectacular fashion. {name} was posting 25-and-10 with shooting "
                 "splits the internet called 'video game numbers'. The MVP ballot debate started before Christmas.",
-                ("Lead the franchise deep into the playoffs \u2014 a Finals run begins now",
+                ("Lead the franchise deep into the playoffs — a Finals run begins now",
                  {"points": 2500, "rebounds": 400, "assists": 1400, "all_stars": 1, "championships": 0}),
                 ("Sign a supermax extension and become the face of the franchise for the next decade",
                  {"points": 2200, "rebounds": 350, "assists": 1200, "all_stars": 1, "championships": 0}),
-            ),
+                ("Chase the assists title and prove you're the most unselfish superstar in the game",
+                 {"points": 2000, "rebounds": 380, "assists": 1600, "all_stars": 1, "championships": 0}),
+            )],
             # 5 – Peak Years (26-30)
-            (
+            [(
                 "Operating at an elite level only the chosen few ever reach, {name} was a walking "
                 "triple-double threat every night. Championships and legacy were the only conversations left.",
                 ("Win the NBA championship and cement a legendary status",
                  {"points": 3000, "rebounds": 500, "assists": 1800, "all_stars": 1, "championships": 1}),
                 ("Chase All-NBA honours and build a Hall of Fame stat line for the ages",
                  {"points": 3400, "rebounds": 450, "assists": 2000, "all_stars": 1, "championships": 0}),
-            ),
+                ("Form a superteam partnership and dominate the league for three straight Finals appearances",
+                 {"points": 2800, "rebounds": 450, "assists": 1700, "all_stars": 1, "championships": 2}),
+            )],
             # 6 – Veteran Phase (30-35)
-            (
-                "Thirty and still defying logic, {name} had evolved into the ultimate floor general \u2014 "
+            [(
+                "Thirty and still defying logic, {name} had evolved into the ultimate floor general — "
                 "reading defences before they formed and elevating every teammate around them.",
                 ("Join a contender as a veteran leader and chase one final ring",
                  {"points": 2200, "rebounds": 350, "assists": 1200, "all_stars": 1, "championships": 1}),
                 ("Stay with the beloved franchise and mentor the next generation of guards",
                  {"points": 1800, "rebounds": 300, "assists": 1000, "all_stars": 0, "championships": 0}),
-            ),
+                ("Reinvent the game as a pass-first maestro who still scores 20 per game",
+                 {"points": 2000, "rebounds": 320, "assists": 1400, "all_stars": 1, "championships": 0}),
+            )],
             # 7 – Final Chapter (35-40)
-            (
+            [(
                 "Father Time had never met a point guard like {name}. The vision was sharper than ever "
                 "even as the explosiveness faded. One final chapter remained to write.",
                 ("Return to the franchise where it all started for an emotional farewell season",
                  {"points": 900, "rebounds": 150, "assists": 500, "all_stars": 0, "championships": 0}),
                 ("Join a title contender as a savvy veteran and push for a storybook ring exit",
                  {"points": 700, "rebounds": 100, "assists": 400, "all_stars": 0, "championships": 1}),
-            ),
+                ("Retire as the greatest floor general of your era after one final dominant season",
+                 {"points": 800, "rebounds": 120, "assists": 450, "all_stars": 0, "championships": 0}),
+            )],
         ]
     elif position_group == "Shooting Guard":
         return [
             # 0 – High School Phenom (16-18)
-            (
+            [(
                 "Gym rats across the country knew the name before anyone else did. {name}, a relentless {style}, "
                 "was dropping 40-point performances before hitting 17 while breaking records with effortless style.",
                 ("Commit to a powerhouse program and pursue a national championship",
                  {"points": 700, "rebounds": 200, "assists": 250, "all_stars": 0, "championships": 0}),
                 ("Choose the program that promises the most shots and full offensive freedom",
                  {"points": 1000, "rebounds": 250, "assists": 300, "all_stars": 0, "championships": 0}),
-            ),
+                ("Sign with the school with the best player development staff to maximise every skill",
+                 {"points": 850, "rebounds": 220, "assists": 275, "all_stars": 0, "championships": 0}),
+            )],
             # 1 – College / Pre-Draft (18-21)
-            (
+            [(
                 "College defenders had nightmares about {name}. A {style} who could get a bucket anywhere "
                 "on the floor, the scoring titles came in consecutive seasons and scouts had made up their minds.",
                 ("Stay and become a college legend, chasing championships and refinement",
                  {"points": 1600, "rebounds": 450, "assists": 500, "all_stars": 0, "championships": 0}),
-                ("Declare early \u2014 the jump shot and athleticism are already NBA-ready",
+                ("Declare early — the jump shot and athleticism are already NBA-ready",
                  {"points": 1100, "rebounds": 300, "assists": 350, "all_stars": 0, "championships": 0}),
-            ),
+                ("Win the conference scoring title every year and leave as the school's all-time leading scorer",
+                 {"points": 1400, "rebounds": 400, "assists": 420, "all_stars": 0, "championships": 0}),
+            )],
             # 2 – NBA Draft & Rookie Year (21-22)
-            (
-                "Selected in the lottery, {name} arrived to the NBA with one mission \u2014 put the ball in the basket. "
+            [(
+                "Selected in the lottery, {name} arrived to the NBA with one mission — put the ball in the basket. "
                 "Every defender in the league was already planning their counter.",
                 ("Start immediately and be the designated scorer from night one",
                  {"points": 1600, "rebounds": 300, "assists": 300, "all_stars": 0, "championships": 0}),
                 ("Accept a reserve role, study the pace, and be unstoppable by year two",
                  {"points": 1000, "rebounds": 200, "assists": 200, "all_stars": 0, "championships": 0}),
-            ),
+                ("Push for a starting role mid-season after proving yourself off the bench",
+                 {"points": 1300, "rebounds": 250, "assists": 250, "all_stars": 0, "championships": 0}),
+            )],
             # 3 – Rising Star (22-24)
-            (
+            [(
                 "The cold-blooded efficiency was there from the opening tip. {name}'s ability to create off the "
                 "dribble and knock down threes had coaches drawing up double-teams every possession.",
                 ("Extend with the franchise and become a go-to scorer on a playoff team",
                  {"points": 2400, "rebounds": 500, "assists": 500, "all_stars": 1, "championships": 0}),
                 ("Force a trade to a contender and prove the big-shot gene in high-stakes moments",
                  {"points": 2000, "rebounds": 400, "assists": 400, "all_stars": 0, "championships": 0}),
-            ),
+                ("Chase the scoring title and announce yourself as the most dangerous two-guard in the league",
+                 {"points": 2800, "rebounds": 420, "assists": 350, "all_stars": 1, "championships": 0}),
+            )],
             # 4 – Breakout Season (24-26)
-            (
+            [(
                 "A 30-point season and a first All-Star start announced {name} to the entire basketball world. "
                 "The step-back three was now illegal in the eyes of every opposing coach.",
                 ("Carry the team on a surprise playoff run and prove you're a franchise cornerstone",
                  {"points": 3000, "rebounds": 600, "assists": 600, "all_stars": 1, "championships": 0}),
                 ("Pursue a scoring title and establish yourself as the premier scorer of your generation",
                  {"points": 3500, "rebounds": 550, "assists": 550, "all_stars": 1, "championships": 0}),
-            ),
+                ("Join a superteam as the second option and contribute to a championship run",
+                 {"points": 2600, "rebounds": 500, "assists": 500, "all_stars": 1, "championships": 1}),
+            )],
             # 5 – Peak Years (26-30)
-            (
+            [(
                 "Two-time All-Star and climbing. {name}'s mid-range game was poetry, the three-point stroke "
                 "a weapon of mass destruction. Now came the moment to convert excellence into eternal legacy.",
                 ("Win the championship and prove the offensive brilliance translates to titles",
                  {"points": 3500, "rebounds": 700, "assists": 700, "all_stars": 1, "championships": 1}),
                 ("Win two scoring titles back-to-back and put your name on the all-time scoring list",
                  {"points": 4200, "rebounds": 650, "assists": 600, "all_stars": 1, "championships": 0}),
-            ),
+                ("Become the two-way player who wins both Defensive Player of the Year and an All-NBA nod",
+                 {"points": 3200, "rebounds": 750, "assists": 650, "all_stars": 1, "championships": 0}),
+            )],
             # 6 – Veteran Phase (30-35)
-            (
+            [(
                 "The explosiveness had mellowed into craft. {name}'s pull-up jumper remained unguardable, "
                 "the basketball IQ compounding with every passing season.",
                 ("Chase one more championship with a contender as the trusted second option",
                  {"points": 2200, "rebounds": 450, "assists": 400, "all_stars": 0, "championships": 1}),
                 ("Remain the franchise centrepiece and mentor emerging shooting guards",
                  {"points": 2800, "rebounds": 500, "assists": 450, "all_stars": 1, "championships": 0}),
-            ),
+                ("Sign a one-year prove-it deal and silence doubters with a vintage scoring performance",
+                 {"points": 2500, "rebounds": 460, "assists": 420, "all_stars": 1, "championships": 0}),
+            )],
             # 7 – Final Chapter (35-40)
-            (
+            [(
                 "Even at 36, the shot-making instincts remained impeccable. {name}'s pull-up in the fourth "
                 "quarter still had arenas holding their breath. One chapter remained.",
                 ("Return to where the journey began for a sentimental final season",
                  {"points": 800, "rebounds": 200, "assists": 200, "all_stars": 0, "championships": 0}),
                 ("Join a contender and leave the game with a championship ring on the finger",
                  {"points": 600, "rebounds": 150, "assists": 150, "all_stars": 0, "championships": 1}),
-            ),
+                ("Retire as the most prolific scorer of your era with one final 20-point season",
+                 {"points": 700, "rebounds": 180, "assists": 175, "all_stars": 0, "championships": 0}),
+            )],
         ]
     elif position_group == "Small Forward":
         return [
             # 0 – High School Phenom (16-18)
-            (
-                "{name} was the most complete prospect anyone had seen in years \u2014 a {style} with the versatility "
+            [(
+                "{name} was the most complete prospect anyone had seen in years — a {style} with the versatility "
                 "to play three positions and dominate each of them. The big programs formed an orderly queue.",
                 ("Commit to a top program and compete for a national championship",
                  {"points": 700, "rebounds": 350, "assists": 300, "all_stars": 0, "championships": 0}),
                 ("Choose the school that offers the most freedom to develop an all-round game",
                  {"points": 850, "rebounds": 400, "assists": 350, "all_stars": 0, "championships": 0}),
-            ),
+                ("Attend the program with the best track record of producing NBA All-Stars at your position",
+                 {"points": 780, "rebounds": 380, "assists": 320, "all_stars": 0, "championships": 0}),
+            )],
             # 1 – College / Pre-Draft (18-21)
-            (
+            [(
                 "The college game was simply too small to contain {name}. A {style} who posted absurd efficiency "
                 "across every statistical category, the consensus top-5 Draft projection arrived by sophomore December.",
                 ("Stay for three years, become the program's greatest-ever player, and leave on your own terms",
                  {"points": 1400, "rebounds": 700, "assists": 600, "all_stars": 0, "championships": 0}),
-                ("Declare after one season \u2014 the athleticism and skill are already elite-level",
+                ("Declare after one season — the athleticism and skill are already elite-level",
                  {"points": 900, "rebounds": 450, "assists": 400, "all_stars": 0, "championships": 0}),
-            ),
+                ("Win the national player of the year award and cement your status as the top prospect",
+                 {"points": 1200, "rebounds": 600, "assists": 500, "all_stars": 0, "championships": 0}),
+            )],
             # 2 – NBA Draft & Rookie Year (21-22)
-            (
+            [(
                 "Top-five pick. The projection met the reality when {name} walked into training camp and looked "
                 "right at home against veterans. The Swiss Army knife skill set worked at every level.",
                 ("Embrace a primary role immediately and chase the Rookie of the Year award",
                  {"points": 1500, "rebounds": 600, "assists": 400, "all_stars": 0, "championships": 0}),
                 ("Accept a secondary role, let the veterans lead, and absorb everything possible",
                  {"points": 1000, "rebounds": 450, "assists": 300, "all_stars": 0, "championships": 0}),
-            ),
+                ("Fight for starting minutes by mid-season and announce yourself as a franchise cornerstone",
+                 {"points": 1250, "rebounds": 530, "assists": 350, "all_stars": 0, "championships": 0}),
+            )],
             # 3 – Rising Star (22-24)
-            (
+            [(
                 "The NBA world was starting to realise what scouts already knew. {name}'s combination of "
                 "passing, scoring, and lockdown defence had coaches calling it once-in-a-generation.",
                 ("Sign a max extension and be the cornerstone of a genuine playoff contender",
                  {"points": 2200, "rebounds": 850, "assists": 700, "all_stars": 1, "championships": 0}),
                 ("Force a move to a team with championship infrastructure and prove the ceiling immediately",
                  {"points": 1900, "rebounds": 750, "assists": 600, "all_stars": 0, "championships": 0}),
-            ),
+                ("Win Defensive Player of the Year while averaging 20 points and reshape the wing position",
+                 {"points": 2000, "rebounds": 800, "assists": 650, "all_stars": 1, "championships": 0}),
+            )],
             # 4 – Breakout Season (24-26)
-            (
+            [(
                 "The breakout was complete and undeniable. {name} was a Defensive Player of the Year candidate "
-                "and a 25-point scorer \u2014 the rarest of combinations in the modern NBA.",
+                "and a 25-point scorer — the rarest of combinations in the modern NBA.",
                 ("Lead the franchise to the Conference Finals",
                  {"points": 2800, "rebounds": 1000, "assists": 800, "all_stars": 1, "championships": 0}),
                 ("Win the Defensive Player of the Year award and set the standard for wing defence",
                  {"points": 2400, "rebounds": 1100, "assists": 750, "all_stars": 1, "championships": 0}),
-            ),
+                ("Pursue the MVP award and cement yourself as the most complete player in the league",
+                 {"points": 3000, "rebounds": 950, "assists": 850, "all_stars": 1, "championships": 0}),
+            )],
             # 5 – Peak Years (26-30)
-            (
+            [(
                 "Perennial All-NBA and the most complete player in the league, {name} had transcended position. "
                 "Teams built defensive game plans around a single player for the first time.",
                 ("Win the NBA Finals and deliver a championship to the city",
                  {"points": 3200, "rebounds": 1200, "assists": 1000, "all_stars": 1, "championships": 1}),
                 ("Pursue the MVP award and cement yourself as the best player on the planet",
                  {"points": 3800, "rebounds": 1100, "assists": 900, "all_stars": 1, "championships": 0}),
-            ),
+                ("Lead back-to-back Finals appearances and establish a dynasty",
+                 {"points": 3000, "rebounds": 1150, "assists": 950, "all_stars": 1, "championships": 2}),
+            )],
             # 6 – Veteran Phase (30-35)
-            (
+            [(
                 "Age had only added layers of craft. {name}'s post-up game, three-point shooting, "
                 "and defensive versatility remained elite tools even as explosiveness naturally declined.",
                 ("Join a contender as an experienced leader and mentor the next crop of forwards",
                  {"points": 2000, "rebounds": 800, "assists": 600, "all_stars": 0, "championships": 1}),
                 ("Stay as a franchise icon and prove longevity with continued All-Star production",
                  {"points": 2500, "rebounds": 900, "assists": 700, "all_stars": 1, "championships": 0}),
-            ),
+                ("Shift into a playmaking role and post career-high assists to reinvent your game",
+                 {"points": 2200, "rebounds": 850, "assists": 800, "all_stars": 1, "championships": 0}),
+            )],
             # 7 – Final Chapter (35-40)
-            (
+            [(
                 "Few wings had played with the intelligence and efficiency that {name} displayed at 36. "
                 "Younger players crowded around every film session, desperate to absorb the knowledge.",
                 ("Return to the team that drafted you for an emotional final season",
                  {"points": 800, "rebounds": 350, "assists": 250, "all_stars": 0, "championships": 0}),
                 ("Sign with a championship contender and ride off into the sunset with a ring",
                  {"points": 600, "rebounds": 250, "assists": 200, "all_stars": 0, "championships": 1}),
-            ),
+                ("Retire as the greatest two-way wing of your era with a farewell All-Star appearance",
+                 {"points": 700, "rebounds": 300, "assists": 220, "all_stars": 1, "championships": 0}),
+            )],
         ]
     elif position_group == "Power Forward":
         return [
             # 0 – High School Phenom (16-18)
-            (
-                "At every grassroots tournament {name} stood above the rest \u2014 a physical {style} who bullied "
+            [(
+                "At every grassroots tournament {name} stood above the rest — a physical {style} who bullied "
                 "older opponents with a combination of strength and footwork that scouts called unprecedented.",
                 ("Commit to a powerhouse program and establish frontcourt dominance immediately",
                  {"points": 700, "rebounds": 600, "assists": 200, "all_stars": 0, "championships": 0}),
                 ("Choose a program where you'll be featured and can develop your perimeter game",
                  {"points": 900, "rebounds": 700, "assists": 250, "all_stars": 0, "championships": 0}),
-            ),
+                ("Pick the school with the best big-man development system to sharpen every tool",
+                 {"points": 800, "rebounds": 650, "assists": 225, "all_stars": 0, "championships": 0}),
+            )],
             # 1 – College / Pre-Draft (18-21)
-            (
+            [(
                 "Conference forwards had no answer for {name}. A {style} who combined a reliable mid-range "
                 "jumper with bruising post play, the double-doubles were automatic from opening night.",
                 ("Stay all four years and break every frontcourt record in program history",
                  {"points": 1400, "rebounds": 1200, "assists": 400, "all_stars": 0, "championships": 0}),
                 ("Declare after two dominant seasons while your stock is at its absolute peak",
                  {"points": 1000, "rebounds": 900, "assists": 300, "all_stars": 0, "championships": 0}),
-            ),
+                ("Win the conference player of the year and use that momentum to jump to the lottery",
+                 {"points": 1200, "rebounds": 1050, "assists": 350, "all_stars": 0, "championships": 0}),
+            )],
             # 2 – NBA Draft & Rookie Year (21-22)
-            (
+            [(
                 "The lottery called {name}'s name and the franchise had found its anchor. "
-                "The physicality was undeniable from the first preseason game \u2014 the NBA had a new problem.",
+                "The physicality was undeniable from the first preseason game — the NBA had a new problem.",
                 ("Start straight away and dominate the interior from the opening night",
                  {"points": 1400, "rebounds": 900, "assists": 250, "all_stars": 0, "championships": 0}),
                 ("Come off the bench, study the veterans, and be a dominant rotation piece in year one",
                  {"points": 900, "rebounds": 650, "assists": 150, "all_stars": 0, "championships": 0}),
-            ),
+                ("Push for the starting role by mid-season after dominant performances off the bench",
+                 {"points": 1150, "rebounds": 780, "assists": 200, "all_stars": 0, "championships": 0}),
+            )],
             # 3 – Rising Star (22-24)
-            (
+            [(
                 "The combination of interior scoring and elite rebounding was making {name} a defensive nightmare. "
-                "The three-ball was developing too \u2014 suddenly a 20-10-plus player with range.",
+                "The three-ball was developing too — suddenly a 20-10-plus player with range.",
                 ("Extend with the franchise as the starting power forward in a playoff run",
                  {"points": 2200, "rebounds": 1400, "assists": 450, "all_stars": 1, "championships": 0}),
                 ("Push for a trade to a winning culture where the talent around you matches the ambition",
                  {"points": 1900, "rebounds": 1200, "assists": 400, "all_stars": 0, "championships": 0}),
-            ),
+                ("Develop a reliable three-ball and become the most versatile stretch-four in the game",
+                 {"points": 2000, "rebounds": 1300, "assists": 420, "all_stars": 1, "championships": 0}),
+            )],
             # 4 – Breakout Season (24-26)
-            (
+            [(
                 "A monster 22-12 season and a first All-Star start sent {name}'s stock into the stratosphere. "
                 "The stretch-four skill set had become the most coveted in the league.",
                 ("Lead the franchise on a deep playoff run and prove the big-game gene",
                  {"points": 2800, "rebounds": 1600, "assists": 600, "all_stars": 1, "championships": 0}),
                 ("Win the Most Improved Award and prove to the league you're among the elite forwards",
                  {"points": 3000, "rebounds": 1700, "assists": 550, "all_stars": 1, "championships": 0}),
-            ),
+                ("Chase an All-NBA First Team nod and cement your status as the premier power forward alive",
+                 {"points": 3200, "rebounds": 1550, "assists": 580, "all_stars": 1, "championships": 0}),
+            )],
             # 5 – Peak Years (26-30)
-            (
+            [(
                 "All-NBA on the ballot every season and the most dominant power forward alive, {name} "
                 "was redefining what the position could look like in the modern era.",
                 ("Win the championship and add a ring to go with the hardware",
                  {"points": 3400, "rebounds": 2000, "assists": 700, "all_stars": 1, "championships": 1}),
                 ("Win back-to-back All-NBA First Teams and build a Hall of Fame statistical foundation",
                  {"points": 3800, "rebounds": 2200, "assists": 650, "all_stars": 1, "championships": 0}),
-            ),
+                ("Lead the franchise to three straight Finals appearances and become a dynasty anchor",
+                 {"points": 3200, "rebounds": 1900, "assists": 680, "all_stars": 1, "championships": 2}),
+            )],
             # 6 – Veteran Phase (30-35)
-            (
+            [(
                 "Wisdom replaced some of the raw power, but {name}'s high-post passing and shooting touch "
-                "had evolved into a completely different \u2014 and equally lethal \u2014 threat.",
+                "had evolved into a completely different — and equally lethal — threat.",
                 ("Accept a veteran leader role alongside a young star and chase a farewell ring",
                  {"points": 2000, "rebounds": 1300, "assists": 450, "all_stars": 0, "championships": 1}),
                 ("Remain as a franchise cornerstone and mentor the emerging generation of power forwards",
                  {"points": 2400, "rebounds": 1500, "assists": 500, "all_stars": 1, "championships": 0}),
-            ),
+                ("Reinvent yourself as an elite three-point shooter and extend your career at a high level",
+                 {"points": 2200, "rebounds": 1400, "assists": 475, "all_stars": 1, "championships": 0}),
+            )],
             # 7 – Final Chapter (35-40)
-            (
+            [(
                 "Defying every statistic about aging bigs, {name} was still posting double-doubles "
                 "at 36 and providing a steadying presence in every locker room.",
                 ("Return to the team where the legacy was built for one final emotional season",
                  {"points": 700, "rebounds": 550, "assists": 150, "all_stars": 0, "championships": 0}),
                 ("Sign with a contender and add a ring to the trophy case on the way out",
                  {"points": 600, "rebounds": 450, "assists": 100, "all_stars": 0, "championships": 1}),
-            ),
+                ("Retire as the greatest stretch-four of your era with a final All-Star appearance",
+                 {"points": 650, "rebounds": 500, "assists": 125, "all_stars": 1, "championships": 0}),
+            )],
         ]
     else:  # Center
         return [
             # 0 – High School Phenom (16-18)
-            (
-                "There had not been a prospect quite like {name} in years \u2014 a towering {style} with footwork "
+            [(
+                "There had not been a prospect quite like {name} in years — a towering {style} with footwork "
                 "that seemed impossible for the frame and a wingspan that blocked out the gymnasium lights.",
                 ("Commit to the blue-blood program with the best tradition of developing big men",
                  {"points": 600, "rebounds": 700, "assists": 150, "all_stars": 0, "championships": 0}),
                 ("Choose the program that promises full offensive usage and an immediate featured role",
                  {"points": 800, "rebounds": 850, "assists": 200, "all_stars": 0, "championships": 0}),
-            ),
+                ("Pick the school with the best analytics staff to unlock every dimension of your game",
+                 {"points": 700, "rebounds": 775, "assists": 175, "all_stars": 0, "championships": 0}),
+            )],
             # 1 – College / Pre-Draft (18-21)
-            (
+            [(
                 "There was simply no answer for {name} within forty feet of the basket. A {style} who averaged "
                 "a double-double with four blocks per game, the consensus top-3 Draft projection arrived in October.",
                 ("Stay for three years and develop an unstoppable post arsenal",
                  {"points": 1300, "rebounds": 1400, "assists": 300, "all_stars": 0, "championships": 0}),
                 ("Declare for the Draft after one dominant season and go top three",
                  {"points": 900, "rebounds": 1000, "assists": 200, "all_stars": 0, "championships": 0}),
-            ),
+                ("Win national player of the year in your junior season before entering the draft",
+                 {"points": 1100, "rebounds": 1200, "assists": 250, "all_stars": 0, "championships": 0}),
+            )],
             # 2 – NBA Draft & Rookie Year (21-22)
-            (
+            [(
                 "A top-three pick and franchise centrepiece from the opening tip, {name} intimidated the entire "
                 "league from the very first blocked shot. Rim protection at this level changed everything.",
                 ("Embrace a featured scoring role and Rookie of the Year consideration immediately",
                  {"points": 1400, "rebounds": 1000, "assists": 250, "all_stars": 0, "championships": 0}),
-                ("Focus on defence and rebounding first \u2014 become the anchor and the rest will follow",
+                ("Focus on defence and rebounding first — become the anchor and the rest will follow",
                  {"points": 900, "rebounds": 1200, "assists": 150, "all_stars": 0, "championships": 0}),
-            ),
+                ("Push for maximum minutes from day one and make an immediate All-Rookie statement",
+                 {"points": 1150, "rebounds": 1100, "assists": 200, "all_stars": 0, "championships": 0}),
+            )],
             # 3 – Rising Star (22-24)
-            (
+            [(
                 "The league's most dominant big man was taking shape. {name}'s post-up efficiency was elite "
                 "and the shot-blocking numbers had opposing coaches rerouting their entire offences.",
                 ("Sign a max extension and become the franchise cornerstone for the next decade",
                  {"points": 2200, "rebounds": 1600, "assists": 350, "all_stars": 1, "championships": 0}),
                 ("Force a move to a legitimate contender and prove you can anchor a championship team",
                  {"points": 1900, "rebounds": 1400, "assists": 300, "all_stars": 0, "championships": 0}),
-            ),
+                ("Develop a face-up game and mid-range jumper to become a truly unstoppable offensive force",
+                 {"points": 2000, "rebounds": 1500, "assists": 320, "all_stars": 1, "championships": 0}),
+            )],
             # 4 – Breakout Season (24-26)
-            (
+            [(
                 "Defensive Player of the Year. The award confirmed what every forward in the league already dreaded. "
                 "{name} had turned the painted area into a no-fly zone with zero exceptions.",
                 ("Lead the franchise to the Conference Finals and prove the complete package",
                  {"points": 2800, "rebounds": 1900, "assists": 500, "all_stars": 1, "championships": 0}),
                 ("Win the Defensive Player of the Year award and establish the standard for rim protection",
                  {"points": 2400, "rebounds": 2100, "assists": 400, "all_stars": 1, "championships": 0}),
-            ),
+                ("Chase the MVP award as the most dominant two-way centre in the league",
+                 {"points": 3000, "rebounds": 1800, "assists": 550, "all_stars": 1, "championships": 0}),
+            )],
             # 5 – Peak Years (26-30)
-            (
+            [(
                 "The most dominant centre on the planet. {name}'s combination of scoring, rebounding, and "
                 "rim protection had turned the position back into the most feared in the sport.",
                 ("Win the NBA championship and deliver the ultimate prize to the city",
                  {"points": 3200, "rebounds": 2300, "assists": 600, "all_stars": 1, "championships": 1}),
                 ("Win back-to-back All-NBA First Teams and chase the all-time scoring and rebounding records",
                  {"points": 3800, "rebounds": 2600, "assists": 550, "all_stars": 1, "championships": 0}),
-            ),
+                ("Lead three straight Finals appearances and cement a place among the greatest centres ever",
+                 {"points": 3000, "rebounds": 2200, "assists": 575, "all_stars": 1, "championships": 2}),
+            )],
             # 6 – Veteran Phase (30-35)
-            (
+            [(
                 "Mobility had faded but the craftwork in the post never did. {name}'s drop step and "
                 "hook shot remained the most unguardable actions in the half-court game.",
                 ("Accept a mentor role alongside a young star and bring championship experience to the locker room",
                  {"points": 1800, "rebounds": 1500, "assists": 300, "all_stars": 0, "championships": 1}),
                 ("Remain as the starting centre and chase a final All-Star appearance to cap the career",
                  {"points": 2200, "rebounds": 1700, "assists": 350, "all_stars": 1, "championships": 0}),
-            ),
+                ("Reinvent as an offensive anchor with an expanded skill set and prove longevity",
+                 {"points": 2000, "rebounds": 1600, "assists": 325, "all_stars": 1, "championships": 0}),
+            )],
             # 7 – Final Chapter (35-40)
-            (
+            [(
                 "They said the body would slow the mind, but {name}'s feel for the game at 37 remained extraordinary. "
                 "Paint touches still produced buckets; blocks still saved games.",
                 ("Return to the franchise that drafted you and write a legendary final chapter",
                  {"points": 600, "rebounds": 600, "assists": 100, "all_stars": 0, "championships": 0}),
                 ("Sign with a championship contender and add a ring before the final curtain",
                  {"points": 500, "rebounds": 500, "assists": 80, "all_stars": 0, "championships": 1}),
-            ),
+                ("Retire as the greatest centre of your era after one last dominant season",
+                 {"points": 550, "rebounds": 550, "assists": 90, "all_stars": 0, "championships": 0}),
+            )],
         ]
 
 
@@ -4460,80 +4630,100 @@ _NBA_COACH_STAGES = [
 
 
 def _nba_coach_stage_data(philosophy: str) -> list:
-    """Return list of (narrative, choice_a, choice_b) tuples for 8 NBA coaching stages."""
+    """Return list of variant-lists for 8 NBA coaching stages.
+    Each stage is a list of one or more variant tuples:
+    (narrative, choice_a, choice_b, choice_c)
+    where each choice is (text, stat_delta_dict).
+    """
     return [
         # 0 – Video Coordinator / Assistant (28-33)
-        (
+        [(
             "After retiring, {name} joined an NBA staff as a video coordinator and quickly became the coach "
             "every player sought out for extra film sessions. The {philosophy} system was being sketched out on whiteboards.",
             ("Coach the perimeter players and build a reputation developing young guards and wings",
              {"wins": 0, "championships": 0, "players_developed": 8, "reputation": 8}),
             ("Focus on defensive scheme design and earn a full-time assistant role ahead of schedule",
              {"wins": 0, "championships": 0, "players_developed": 3, "reputation": 12}),
-        ),
+            ("Run individual player development sessions and build a following among the franchise's young core",
+             {"wins": 0, "championships": 0, "players_developed": 6, "reputation": 10}),
+        )],
         # 1 – Lead Assistant Coach (33-38)
-        (
+        [(
             "The head coach saw the brilliance in the film room and on the practice floor. "
             "{name} was elevated to lead assistant \u2014 the final stepping stone before the top job.",
             ("Accept a lead assistant role at a championship-contending franchise",
              {"wins": 35, "championships": 0, "players_developed": 6, "reputation": 20}),
             ("Take a lead assistant role at an ambitious mid-market team with full offensive authority",
              {"wins": 28, "championships": 0, "players_developed": 9, "reputation": 22}),
-        ),
+            ("Interview for a lead assistant role at a rebuilding team and gain full scheme-design freedom",
+             {"wins": 22, "championships": 0, "players_developed": 12, "reputation": 18}),
+        )],
         # 2 – First Head Coach Role (38-42)
-        (
+        [(
             "The call came on a January afternoon. {name} was a head coach in the National Basketball Association. "
             "The {philosophy} system was installed from day one of training camp.",
             ("Implement the system boldly and demand immediate buy-in from the veterans in the locker room",
              {"wins": 120, "championships": 0, "players_developed": 5, "reputation": 24}),
             ("Build trust through the locker room first, then gradually impose the full philosophy",
              {"wins": 100, "championships": 0, "players_developed": 10, "reputation": 28}),
-        ),
+            ("Make a high-profile trade to land a cornerstone player and accelerate the culture shift",
+             {"wins": 110, "championships": 0, "players_developed": 7, "reputation": 26}),
+        )],
         # 3 – Rebuilding a Franchise (42-46)
-        (
+        [(
             "A struggling lottery team came calling with a mandate to rebuild from scratch. "
             "{name} accepted the challenge \u2014 turning a losing culture into a winning one is the ultimate test.",
             ("Go all-in on the Draft and develop homegrown stars through a multi-year plan",
              {"wins": 130, "championships": 0, "players_developed": 14, "reputation": 30}),
             ("Leverage free agency to fast-track the rebuild and reach the playoffs ahead of schedule",
              {"wins": 165, "championships": 0, "players_developed": 5, "reputation": 34}),
-        ),
+            ("Blend draft picks and strategic veteran signings to create immediate competitiveness",
+             {"wins": 148, "championships": 0, "players_developed": 9, "reputation": 32}),
+        )],
         # 4 – Playoff Contender (46-50)
-        (
+        [(
             "The rebuild had delivered. {name}'s roster was playoff-calibre and the fanbase was buzzing "
             "with Finals energy for the first time in a generation.",
             ("Make a deep playoff run \u2014 reach the Conference Finals and send a message to the league",
              {"wins": 180, "championships": 0, "players_developed": 8, "reputation": 38}),
             ("Swing a bold trade at the deadline and target a Conference championship this season",
              {"wins": 160, "championships": 0, "players_developed": 5, "reputation": 44}),
-        ),
+            ("Stay disciplined and peak the team perfectly for a deep postseason run",
+             {"wins": 170, "championships": 0, "players_developed": 7, "reputation": 40}),
+        )],
         # 5 – Finals Run (50-54)
-        (
+        [(
             "An NBA Finals berth was within reach. {name}'s {philosophy} system was operating at peak "
             "efficiency and the squad had every piece to go all the way.",
             ("Win the NBA championship and deliver the ultimate prize to the franchise",
              {"wins": 200, "championships": 1, "players_developed": 6, "reputation": 52}),
             ("Build the infrastructure for sustained excellence \u2014 roster depth over a one-year title run",
              {"wins": 175, "championships": 0, "players_developed": 10, "reputation": 48}),
-        ),
+            ("Pursue the championship while simultaneously developing the next core of franchise talent",
+             {"wins": 188, "championships": 1, "players_developed": 8, "reputation": 50}),
+        )],
         # 6 – Dynasty Builder (54-58)
-        (
+        [(
             "Back-to-back Finals windows had opened as {name} had assembled what analysts were already "
             "calling a dynasty-level roster. Only the truly great coaches had achieved what was now in sight.",
             ("Win consecutive championships and become the defining coach of your era",
              {"wins": 220, "championships": 2, "players_developed": 8, "reputation": 60}),
             ("Prioritise developing the next generation of stars alongside sustained championship contention",
              {"wins": 190, "championships": 1, "players_developed": 18, "reputation": 55}),
-        ),
+            ("Mastermind a third championship and cement yourself as the greatest coach in NBA history",
+             {"wins": 205, "championships": 2, "players_developed": 11, "reputation": 62}),
+        )],
         # 7 – Legacy Chapter (58+)
-        (
+        [(
             "At 58, {name}'s legacy was already written in NBA history. "
             "But one final chapter remained \u2014 a chance to be remembered as the greatest coach of all time.",
             ("Return to a beloved former team for an emotional reunion and one last championship push",
              {"wins": 120, "championships": 1, "players_developed": 10, "reputation": 45}),
             ("Take over a first-time Finals contender and deliver the ultimate storybook ending",
              {"wins": 150, "championships": 2, "players_developed": 12, "reputation": 55}),
-        ),
+            ("Retire at the very top with one final dominant season that seals the greatest coaching legacy",
+             {"wins": 135, "championships": 1, "players_developed": 8, "reputation": 50}),
+        )],
     ]
 
 
