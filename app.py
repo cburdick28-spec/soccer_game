@@ -1,12 +1,15 @@
 """
 app.py  —  ⚽ Soccer Career Guesser  (Advanced Edition)
-Six game modes:
+Nine game modes:
   1. Daily Challenge – same mystery player for everyone, seeded by today's date
   2. Statistics & Achievements
   3. AI Career Simulator – guide your own footballer from academy to retirement
   4. Coach Career Sim – build a managerial career from grassroots to glory
-  5. NFL Player Sim – simulate an NFL player career
-  6. NFL Head Coach – simulate an NFL head coaching career
+  5. Referee Career Sim – officiate a full football refereeing journey
+  6. NFL Player Sim – simulate an NFL player career
+  7. NFL Head Coach – simulate an NFL head coaching career
+  8. NBA Player Sim – simulate an NBA player career
+  9. NBA Head Coach – simulate an NBA head coaching career
 """
 
 import random
@@ -240,6 +243,17 @@ DEFAULTS = {
     "coach_stats":         {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0},
     "coach_history":       [],
     "coach_prefill":       None,   # {name, nationality} pre-filled from player sim transition
+    # Referee Career Sim
+    "referee_profile":          None,   # {name, nationality, style}
+    "referee_stage_idx":        -1,
+    "referee_awaiting_outcome": False,
+    "referee_chosen_option":    None,
+    "referee_narrative":        "",
+    "referee_choices":          [],
+    "referee_outcome_text":     "",
+    "referee_pool_size":        0,
+    "referee_stats":            {"matches": 0, "accuracy": 0, "authority": 0, "integrity": 0, "corruption": 0},
+    "referee_history":          [],
     # NFL Player Sim
     "nfl_player":           None,   # {name, position_group, style}
     "nfl_stage_idx":        -1,     # -1=not started, 0-7=stage, 8=ended
@@ -406,14 +420,15 @@ with st.sidebar:
 # Main area — title
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<h1 style='text-align:center;font-size:2.6rem'>⚽ Soccer Career Guesser</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · AI-powered career &amp; coaching simulations · Soccer, NFL &amp; NBA</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#aaa;font-size:1rem'>91 legendary footballers · player, coach, and referee simulations · Soccer, NFL &amp; NBA</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-tab_daily, tab_stats, tab_ai, tab_coach, tab_nfl_player, tab_nfl_coach, tab_nba_player, tab_nba_coach = st.tabs([
+tab_daily, tab_stats, tab_ai, tab_coach, tab_referee, tab_nfl_player, tab_nfl_coach, tab_nba_player, tab_nba_coach = st.tabs([
     "📅 Daily Challenge",
     "📊 Stats & Achievements",
     "🤖 AI Career Sim",
     "🧑‍💼 Coach Career Sim",
+    "🧑‍⚖️ Referee Career Sim",
     "🏈 NFL Player Sim",
     "🏈 NFL Head Coach",
     "🏀 NBA Player Sim",
@@ -2601,6 +2616,485 @@ with tab_coach:
             st.session_state.coach_outcome_text     = ""
             st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
             st.session_state.coach_history          = []
+            st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REFEREE CAREER SIM — constants, helpers, tab rendering
+# ══════════════════════════════════════════════════════════════════════════════
+
+_REFEREE_STYLES = [
+    "Strict Enforcer",
+    "Game-Flow Manager",
+    "VAR-First Technician",
+    "Player-Protection Specialist",
+    "Authority-Driven Traditionalist",
+    "Calm Communicator",
+]
+
+_REFEREE_STAGES = [
+    {"idx": 0, "id": "academy",      "name": "Grassroots & Youth Leagues",   "age": "24–28", "icon": "🌱"},
+    {"idx": 1, "id": "regional",     "name": "Regional Senior Football",      "age": "28–32", "icon": "🟨"},
+    {"idx": 2, "id": "pro_entry",    "name": "Professional Debut Season",     "age": "32–36", "icon": "📋"},
+    {"idx": 3, "id": "top_flight",   "name": "Top-Flight Appointment",        "age": "36–40", "icon": "⚖️"},
+    {"idx": 4, "id": "continental",  "name": "Continental Competitions",      "age": "40–44", "icon": "🌍"},
+    {"idx": 5, "id": "world_stage",  "name": "World Tournament Cycle",        "age": "44–48", "icon": "🏟️"},
+    {"idx": 6, "id": "legacy_years", "name": "Elite Finals Specialist",       "age": "48–52", "icon": "🏆"},
+    {"idx": 7, "id": "mentor",       "name": "Mentor, Assessor & Final Whistle", "age": "52+", "icon": "🏁"},
+]
+
+_REFEREE_STAGE_NARRATIVES = {
+    "academy": [
+        "Your first full season with the whistle begins on muddy local pitches. Every decision is tested by loud benches, emotional parents, and raw players learning the rules.",
+        "The county appointments board keeps assigning you to chaotic youth fixtures. This is where you learn whether your style can control the game without losing authority.",
+        "On local grounds, one decision can define your reputation for months. You must set a clear standard from the first whistle.",
+    ],
+    "regional": [
+        "Regional derbies raise the stakes. Coaches submit clips to the referee committee, and your consistency starts to matter for promotion.",
+        "Senior football brings sharper gamesmanship and constant pressure from technical areas. You are now judged on composure under noise.",
+        "With bigger crowds and tighter margins, your match control determines whether games stay football-focused or spiral into chaos.",
+    ],
+    "pro_entry": [
+        "The professional list call-up arrives. Every call is broadcast, replayed, and debated across media channels within minutes.",
+        "Your debut season in professional football tests your positioning, communication, and stamina. One poor sequence can shape the next assignment.",
+        "You are now officiating players who know every loophole. Managing simulation, dissent, and tactical fouls is part of every match.",
+    ],
+    "top_flight": [
+        "Top-flight football is relentless: sold-out stadiums, high-profile managers, and title pressure. Match control and credibility must be immediate.",
+        "You are on the elite domestic panel now. Every yellow, red, and penalty call can swing the table and dominate headlines.",
+        "Derbies and title races define this stage. Maintaining neutral authority is non-negotiable with every club watching your pattern.",
+    ],
+    "continental": [
+        "Continental ties add style clashes, crowd intensity, and travel fatigue. Your command of advantage and discipline is under UEFA-level scrutiny.",
+        "Knockout football across borders demands consistency and elite teamwork with assistants and VAR. Small errors become continental talking points.",
+        "Different football cultures challenge your communication style. You must adapt without losing control or fairness.",
+    ],
+    "world_stage": [
+        "A major world tournament places your badge under global analysis. One moment can become a career-defining highlight or controversy.",
+        "You are assigned to high-pressure international fixtures where simulation, time-wasting, and tactical fouls appear in every phase.",
+        "At this level, trust in your neutrality is everything. You must manage stars, benches, and VAR delays with calm authority.",
+    ],
+    "legacy_years": [
+        "Finals week arrives and your name is shortlisted for the biggest matches. Every disciplinary threshold and advantage call is magnified.",
+        "You are now seen as the benchmark official for elite fixtures. Clubs expect strict consistency, not compromise.",
+        "Your late-career assignments are about legacy: can you keep authority, fairness, and precision when every decision is historic?",
+    ],
+    "mentor": [
+        "As a senior official, you still handle marquee fixtures while mentoring younger referees. Your standards shape the next generation.",
+        "Assessments, seminars, and high-pressure appointments now run in parallel. Leadership off the pitch matters as much as decisions on it.",
+        "Your final chapter is about what remains after retirement: trust, credibility, and the officiating culture you leave behind.",
+    ],
+}
+
+_REF_MATCH_CONTEXTS = [
+    "youth cup semifinal",
+    "heated local derby",
+    "promotion six-pointer",
+    "relegation showdown",
+    "title race decider",
+    "continental knockout first leg",
+    "continental knockout second leg",
+    "domestic cup quarterfinal",
+    "domestic cup semifinal",
+    "domestic cup final",
+    "international qualifier",
+    "world tournament group match",
+]
+
+_REF_INCIDENTS = [
+    ("late studs-up tackle near halfway", 6, 8, 5),
+    ("reckless challenge stopping a counter", 7, 9, 4),
+    ("possible handball in a crowded box", 8, 5, 6),
+    ("simulation attempt to win a penalty", 7, 6, 7),
+    ("persistent tactical fouling by the same midfielder", 6, 8, 5),
+    ("mass confrontation after a disputed throw-in", 5, 9, 4),
+    ("goalkeeper delaying restart repeatedly", 6, 7, 5),
+    ("coach stepping outside technical area to provoke", 5, 8, 6),
+    ("violent conduct off the ball spotted by assistant", 9, 10, 8),
+    ("possible offside interfering with play before a goal", 8, 6, 6),
+]
+
+_REF_DISCIPLINARY_RESPONSES = [
+    ("issue a verbal warning and manage with preventative communication", 3, 2, 1, 0),
+    ("show a yellow card immediately and reset disciplinary line", 6, 6, 5, 0),
+    ("show a straight red card and file full misconduct details", 9, 9, 8, 0),
+    ("consult assistant and VAR, then enforce strongest justified sanction", 8, 7, 7, 0),
+]
+
+_REF_BRIBERY_ACTORS = [
+    "club director",
+    "player agent",
+    "assistant coach",
+    "security liaison",
+    "betting intermediary",
+    "former teammate",
+    "regional federation fixer",
+    "sponsor representative",
+    "hospitality executive",
+    "media broker",
+]
+
+_REF_BRIBE_OFFERS = [
+    "cash in an unmarked envelope",
+    "luxury travel package for your family",
+    "paid speaking contract after the season",
+    "VIP hospitality for the next tournament",
+    "an expensive watch delivered anonymously",
+    "a promise of easier assignments through contacts",
+]
+
+_REF_BRIBERY_RESPONSES = [
+    ("reject the approach, document every detail, and report to integrity unit", 6, 7, 14, -5),
+    ("reject privately but choose not to file an official report", 3, 2, 2, 0),
+    ("delay action and keep communication channel open for leverage", -2, -3, -8, 8),
+    ("accept the offer and quietly adjust borderline decisions", -6, -6, -14, 14),
+]
+
+_REF_FAVORITISM_SCENARIOS = [
+    "the home crowd demanding every 50-50 call",
+    "a federation official hinting at preferred outcomes",
+    "media pressure protecting a star striker",
+    "a manager repeatedly appealing for soft penalties",
+    "broadcast commentators framing one team as victims",
+    "a former club where you once played",
+    "a local association asking for leniency in cards",
+    "a title-contending giant expecting benefit of doubt",
+]
+
+_REF_FAVORITISM_RESPONSES = [
+    ("publicly reinforce neutral standards with captains and stick to strict consistency", 7, 7, 10, -2),
+    ("balance optics by splitting doubtful calls evenly regardless of merit", -1, 1, -5, 4),
+    ("lean subtly toward one side in non-obvious moments", -4, -3, -9, 8),
+    ("double-down on objective process and use team communication to explain key calls", 8, 6, 9, -1),
+]
+
+_REF_PUNISHMENT_EVENTS = [
+    "repeated dissent from a captain after warnings",
+    "bench staff insulting assistant referee",
+    "player kicking ball away after whistle",
+    "dangerous two-foot challenge in transition",
+    "retaliation foul after advantage",
+    "time-wasting substitution theatre in stoppage time",
+    "goal celebration entering opposition technical area",
+    "mocking applause directed at your decision",
+    "mass bench reaction around fourth official",
+    "goalkeeper leaving line early multiple times",
+]
+
+_REF_PUNISHMENT_RESPONSES = [
+    ("apply immediate caution and formal warning to prevent escalation", 5, 6, 6, 0),
+    ("issue strongest legal sanction available and record full report", 8, 9, 7, 0),
+    ("manage verbally to keep game flowing but avoid cards", 2, 1, 0, 0),
+    ("target one side with harsher discipline than similar opposite incidents", -3, -2, -7, 7),
+]
+
+
+def _referee_stage_option_pool(stage_id: str) -> list[tuple[str, dict]]:
+    options = []
+
+    for match in _REF_MATCH_CONTEXTS:
+        for incident, base_acc, base_auth, base_integrity in _REF_INCIDENTS:
+            for response, d_acc, d_auth, d_integrity, d_corruption in _REF_DISCIPLINARY_RESPONSES:
+                options.append((
+                    f"In a {match}, there is {incident}; you {response}.",
+                    {
+                        "matches": 1,
+                        "accuracy": base_acc + d_acc,
+                        "authority": base_auth + d_auth,
+                        "integrity": base_integrity + d_integrity,
+                        "corruption": max(0, d_corruption),
+                    },
+                ))
+
+    for actor in _REF_BRIBERY_ACTORS:
+        for offer in _REF_BRIBE_OFFERS:
+            for response, d_acc, d_auth, d_integrity, d_corruption in _REF_BRIBERY_RESPONSES:
+                options.append((
+                    f"Before a {stage_id.replace('_', ' ')} assignment, a {actor} offers {offer}; you {response}.",
+                    {
+                        "matches": 1,
+                        "accuracy": d_acc,
+                        "authority": d_auth,
+                        "integrity": d_integrity,
+                        "corruption": max(0, d_corruption),
+                    },
+                ))
+
+    for scenario in _REF_FAVORITISM_SCENARIOS:
+        for response, d_acc, d_auth, d_integrity, d_corruption in _REF_FAVORITISM_RESPONSES:
+            options.append((
+                f"With {scenario}, you {response}.",
+                {
+                    "matches": 1,
+                    "accuracy": d_acc,
+                    "authority": d_auth,
+                    "integrity": d_integrity,
+                    "corruption": max(0, d_corruption),
+                },
+            ))
+
+    for event in _REF_PUNISHMENT_EVENTS:
+        for response, d_acc, d_auth, d_integrity, d_corruption in _REF_PUNISHMENT_RESPONSES:
+            options.append((
+                f"After {event}, you {response}.",
+                {
+                    "matches": 1,
+                    "accuracy": d_acc,
+                    "authority": d_auth,
+                    "integrity": d_integrity,
+                    "corruption": max(0, d_corruption),
+                },
+            ))
+
+    return options
+
+
+def _referee_generate_stage(profile: dict, stage: dict, stats: dict) -> dict:
+    pool = _referee_stage_option_pool(stage["id"])
+    used = {h["choice"] for h in st.session_state.referee_history}
+    candidates = [entry for entry in pool if entry[0] not in used]
+    if len(candidates) < 3:
+        candidates = pool
+    picks = random.sample(candidates, 3)
+    return {
+        "narrative": random.choice(_REFEREE_STAGE_NARRATIVES[stage["id"]]),
+        "choices": [p[0] for p in picks],
+        "stat_deltas": [p[1] for p in picks],
+        "pool_size": len(pool),
+    }
+
+
+def _referee_generate_outcome(profile: dict, stage: dict, choice_text: str, delta: dict) -> str:
+    stat_parts = []
+    if delta.get("matches"):    stat_parts.append(f"{delta['matches']} high-pressure match handled")
+    if delta.get("accuracy"):   stat_parts.append(f"{delta['accuracy']} decision-accuracy points")
+    if delta.get("authority"):  stat_parts.append(f"{delta['authority']} authority points")
+    if delta.get("integrity"):  stat_parts.append(f"{delta['integrity']} integrity points")
+    if delta.get("corruption"): stat_parts.append(f"{delta['corruption']} corruption risk")
+    impact = ", ".join(stat_parts) if stat_parts else "valuable refereeing experience"
+
+    if delta.get("corruption", 0) >= 10:
+        return (
+            f"The decision from your {stage['name']} assignment triggers immediate scrutiny and whispers of manipulation. "
+            f"Official reviews follow, and your profile is damaged despite short-term control of the match ({impact})."
+        )
+    if delta.get("integrity", 0) >= 10:
+        return (
+            f"Your handling of the incident becomes an integrity case-study for younger officials. "
+            f"Teams may disagree, but your process is respected and your appointments strengthen ({impact})."
+        )
+    if delta.get("authority", 0) >= 12:
+        return (
+            f"The match settles quickly after your intervention, with players adapting to a clear disciplinary line. "
+            f"Assessors praise your command and preventive communication ({impact})."
+        )
+    return (
+        f"You navigate another complicated match sequence and keep control through your refereeing style. "
+        f"The committee logs this stage as a meaningful contribution to your career record ({impact})."
+    )
+
+
+def _referee_career_rating(stats: dict) -> tuple[int, str]:
+    score = (
+        stats["matches"] * 1.4
+        + stats["accuracy"] * 1.8
+        + stats["authority"] * 1.5
+        + stats["integrity"] * 2.0
+        - stats["corruption"] * 2.5
+    )
+    if score >= 1450 and stats["corruption"] <= 20: return 99, "🐐 Immortal Match Official"
+    if score >= 1200 and stats["corruption"] <= 35: return 95, "⭐ World-Class Elite Referee"
+    if score >= 900 and stats["corruption"] <= 55: return 90, "🌟 International Big-Match Referee"
+    if score >= 650: return 83, "📈 Top-Flight Referee"
+    if score >= 420: return 74, "✅ Trusted Professional Referee"
+    return 62, "🟨 Developing Match Official"
+
+
+# ── Referee Sim: tab rendering ────────────────────────────────────────────────
+with tab_referee:
+    st.markdown("## 🧑‍⚖️ Referee Career Simulator")
+    st.markdown(
+        "Officiate your way from grassroots football to world finals. "
+        "This mode includes massive event variety with disciplinary calls, bribery pressure, favoritism pressure, and punishments."
+    )
+
+    ref_stage_idx = st.session_state.referee_stage_idx
+    ref_profile   = st.session_state.referee_profile
+
+    if ref_stage_idx == -1:
+        st.markdown("### 📋 Create Your Referee Profile")
+        col_rf1, col_rf2 = st.columns(2)
+        with col_rf1:
+            ref_name = st.text_input("Referee Name", placeholder="e.g. Sofia Almeida", key="ref_name_input")
+            ref_nat_options = sorted(list(FLAGS.keys()) + _AI_EXTRA_NATIONALITIES)
+            ref_nat = st.selectbox("Nationality", ref_nat_options, key="ref_nat_input")
+        with col_rf2:
+            ref_style = st.selectbox("Officiating Style", _REFEREE_STYLES, key="ref_style_input")
+
+        option_count = len(_referee_stage_option_pool("academy"))
+        st.caption(f"🧠 Referee decision bank loaded: {option_count} unique options per stage template.")
+
+        if st.button("🚀 Start Referee Career", key="ref_start"):
+            if not ref_name.strip():
+                st.warning("Please enter a referee name.")
+            else:
+                st.session_state.referee_profile = {
+                    "name": ref_name.strip(),
+                    "nationality": ref_nat,
+                    "style": ref_style,
+                }
+                st.session_state.referee_stage_idx        = 0
+                st.session_state.referee_awaiting_outcome = False
+                st.session_state.referee_chosen_option    = None
+                st.session_state.referee_narrative        = ""
+                st.session_state.referee_choices          = []
+                st.session_state.referee_outcome_text     = ""
+                st.session_state.referee_pool_size        = 0
+                st.session_state.referee_stats            = {"matches": 0, "accuracy": 0, "authority": 0, "integrity": 0, "corruption": 0}
+                st.session_state.referee_history          = []
+                st.rerun()
+
+    elif ref_stage_idx < len(_REFEREE_STAGES):
+        stage = _REFEREE_STAGES[ref_stage_idx]
+        stats = st.session_state.referee_stats
+
+        st.markdown(f"### {stage['icon']} Stage {ref_stage_idx + 1} / {len(_REFEREE_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.progress(ref_stage_idx / len(_REFEREE_STAGES))
+
+        rr1, rr2, rr3, rr4, rr5 = st.columns(5)
+        with rr1: st.metric("🎯 Accuracy",   stats["accuracy"])
+        with rr2: st.metric("🛡️ Authority",  stats["authority"])
+        with rr3: st.metric("🤝 Integrity",  stats["integrity"])
+        with rr4: st.metric("🚨 Corruption", stats["corruption"])
+        with rr5: st.metric("⚽ Matches",     stats["matches"])
+
+        st.markdown("---")
+
+        if not st.session_state.referee_narrative:
+            data = _referee_generate_stage(ref_profile, stage, stats)
+            st.session_state.referee_narrative = data["narrative"]
+            st.session_state.referee_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.referee_pool_size = data["pool_size"]
+            st.rerun()
+
+        st.markdown(
+            f'<div style="background:rgba(255,255,255,0.06);border-left:4px solid #56ccf2;'
+            f'border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:1.05rem;color:#e0e0e0;">'
+            f'{st.session_state.referee_narrative}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"Option pool for this stage: {st.session_state.get('referee_pool_size', 0)} possibilities.")
+
+        if st.session_state.referee_awaiting_outcome:
+            chosen_idx = st.session_state.referee_chosen_option
+            choice_text, delta = st.session_state.referee_choices[chosen_idx]
+
+            if not st.session_state.referee_outcome_text:
+                st.session_state.referee_outcome_text = _referee_generate_outcome(ref_profile, stage, choice_text, delta)
+                st.rerun()
+
+            st.markdown(f"**You chose:** *{choice_text}*")
+            st.markdown(
+                f'<div style="background:rgba(86,204,242,0.12);border-left:4px solid #2f80ed;'
+                f'border-radius:10px;padding:14px 20px;margin:10px 0;color:#e0e0e0;">'
+                f'{st.session_state.referee_outcome_text}</div>',
+                unsafe_allow_html=True,
+            )
+
+            gains = []
+            if delta.get("matches"):    gains.append(f"⚽ +{delta['matches']} matches")
+            if delta.get("accuracy"):   gains.append(f"🎯 +{delta['accuracy']} accuracy")
+            if delta.get("authority"):  gains.append(f"🛡️ +{delta['authority']} authority")
+            if delta.get("integrity"):  gains.append(f"🤝 +{delta['integrity']} integrity")
+            if delta.get("corruption"): gains.append(f"🚨 +{delta['corruption']} corruption")
+            if gains:
+                st.markdown("**Career impact:** " + "  ·  ".join(gains))
+
+            next_label = "▶️ Next Stage" if ref_stage_idx < len(_REFEREE_STAGES) - 1 else "🏁 Retire & See Legacy"
+            if st.button(next_label, key="ref_next_stage"):
+                for k, v in delta.items():
+                    st.session_state.referee_stats[k] += v
+                st.session_state.referee_history.append({
+                    "stage": stage["name"],
+                    "choice": choice_text,
+                    "outcome": st.session_state.referee_outcome_text,
+                    "delta": delta,
+                })
+                st.session_state.referee_stage_idx        += 1
+                st.session_state.referee_awaiting_outcome  = False
+                st.session_state.referee_chosen_option     = None
+                st.session_state.referee_narrative         = ""
+                st.session_state.referee_choices           = []
+                st.session_state.referee_outcome_text      = ""
+                st.session_state.referee_pool_size         = 0
+                st.rerun()
+
+        else:
+            st.markdown("### 🤔 What is your call?")
+            choices = st.session_state.referee_choices
+            col_ra, col_rb, col_rc = st.columns(3)
+            with col_ra:
+                if st.button(f"**A:** {choices[0][0]}", key="ref_choice_a", use_container_width=True):
+                    st.session_state.referee_chosen_option    = 0
+                    st.session_state.referee_awaiting_outcome = True
+                    st.rerun()
+            with col_rb:
+                if st.button(f"**B:** {choices[1][0]}", key="ref_choice_b", use_container_width=True):
+                    st.session_state.referee_chosen_option    = 1
+                    st.session_state.referee_awaiting_outcome = True
+                    st.rerun()
+            with col_rc:
+                if st.button(f"**C:** {choices[2][0]}", key="ref_choice_c", use_container_width=True):
+                    st.session_state.referee_chosen_option    = 2
+                    st.session_state.referee_awaiting_outcome = True
+                    st.rerun()
+
+    elif ref_stage_idx >= len(_REFEREE_STAGES):
+        profile = st.session_state.referee_profile
+        stats = st.session_state.referee_stats
+        rating, badge = _referee_career_rating(stats)
+        flag = FLAGS.get(profile["nationality"], "🌍")
+
+        st.markdown(f"## 🏁 {profile['name']} — Refereeing Career Over")
+        st.markdown(
+            f'<div class="result-correct" style="font-size:1.6rem;background:linear-gradient(90deg,#0f4c75,#2f80ed);">'
+            f'{badge} &nbsp; Career Rating: {rating} / 100'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{flag} {profile['nationality']} · {profile['style']}**")
+
+        rs1, rs2, rs3, rs4, rs5 = st.columns(5)
+        with rs1: st.metric("⚽ Matches",     stats["matches"])
+        with rs2: st.metric("🎯 Accuracy",   stats["accuracy"])
+        with rs3: st.metric("🛡️ Authority", stats["authority"])
+        with rs4: st.metric("🤝 Integrity", stats["integrity"])
+        with rs5: st.metric("🚨 Corruption", stats["corruption"])
+
+        st.markdown("---")
+        st.markdown("### 📖 Refereeing Chronicle")
+        for entry in st.session_state.referee_history:
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.05);border-left:4px solid #2f80ed;'
+                f'border-radius:8px;padding:12px 16px;margin:8px 0;">'
+                f'<strong style="color:#56ccf2">{entry["stage"]}</strong><br>'
+                f'<em style="color:#ffc107">Decision: {entry["choice"]}</em><br>'
+                f'<span style="color:#ccc">{entry["outcome"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if st.button("🔄 Start a New Referee Career", key="ref_restart"):
+            st.session_state.referee_profile          = None
+            st.session_state.referee_stage_idx        = -1
+            st.session_state.referee_awaiting_outcome = False
+            st.session_state.referee_chosen_option    = None
+            st.session_state.referee_narrative        = ""
+            st.session_state.referee_choices          = []
+            st.session_state.referee_outcome_text     = ""
+            st.session_state.referee_pool_size        = 0
+            st.session_state.referee_stats            = {"matches": 0, "accuracy": 0, "authority": 0, "integrity": 0, "corruption": 0}
+            st.session_state.referee_history          = []
             st.rerun()
 
 

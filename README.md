@@ -1,6 +1,6 @@
 # ⚽ Soccer Career Guesser — Advanced Edition
 
-An advanced Streamlit football (soccer) guessing game inspired by **Beat-Footballer-Career** and **Footballizer**, featuring five game modes, 91 real players, multiple positions, leagues, eras, continents, and more.
+An advanced Streamlit football (soccer) guessing game inspired by **Beat-Footballer-Career** and **Footballizer**, featuring multiple game modes, 91 real players, multiple positions, leagues, eras, continents, and more.
 
 ---
 
@@ -43,6 +43,11 @@ Build your **daily streak** by coming back each day!
 ### 📊 Stats & Achievements
 Track your total score, win rate, streaks, and unlock **12 achievements**.
 
+### 🧑‍⚖️ Referee Career Sim
+Build a full officiating career from grassroots to world-stage finals.  
+Handle realistic match incidents with a massive decision bank (**792 options per stage template**) covering:
+disciplinary control, punishments, VAR pressure, bribery attempts, and favoritism pressure.
+
 ---
 
 ## 📊 Features
@@ -74,7 +79,7 @@ Then open **http://localhost:8501** in your browser.
 
 ```
 soccer_game/
-├── app.py           # Streamlit UI (5 game modes + sidebar + stats)
+├── app.py           # Streamlit UI (career guesser + simulators + sidebar + stats)
 ├── game_data.py     # Player database (91 players) + game logic
 ├── requirements.txt # Dependencies
 └── README.md
