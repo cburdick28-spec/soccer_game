@@ -1785,6 +1785,19 @@ def _scaled_delta(delta: dict, multiplier: float) -> dict:
     return scaled
 
 
+def _nba_points_style_multiplier(style: str) -> float:
+    s = style.lower()
+    if "scor" in s:
+        return 1.9
+    if "slasher" in s or "post scorer" in s:
+        return 1.5
+    if "two-way" in s:
+        return 1.35
+    if "facilitator" in s or "floor general" in s:
+        return 1.2
+    return 1.28
+
+
 def _dynamic_decision_pack(prefix: str, stage: dict, base_choices: list[tuple[str, dict]]) -> dict:
     form_state = _roll_form_state(prefix)
     history_key = f"{prefix}_history"
@@ -5023,10 +5036,17 @@ def _nba_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) ->
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
     dynamic_pack = _dynamic_decision_pack("nba", stage, [tmpl_a, tmpl_b, tmpl_c])
+    points_mult = _nba_points_style_multiplier(player["style"])
+    boosted_deltas = []
+    for delta in dynamic_pack["stat_deltas"]:
+        nd = dict(delta)
+        if nd.get("points", 0):
+            nd["points"] = max(1, int(round(nd["points"] * points_mult)))
+        boosted_deltas.append(nd)
     fallback = {
         "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
         "choices":     dynamic_pack["choices"],
-        "stat_deltas": dynamic_pack["stat_deltas"],
+        "stat_deltas": boosted_deltas,
         "pool_size":   dynamic_pack["pool_size"],
         "form_state":  dynamic_pack["form_state"],
     }
