@@ -230,6 +230,9 @@ DEFAULTS = {
     "ai_narrative":        "",
     "ai_choices":          [],     # [(text, stat_delta), (text, stat_delta)]
     "ai_outcome_text":     "",
+    "ai_option_pool_size": 0,
+    "ai_form_state":       "normal",
+    "ai_form_duration":    0,
     "ai_stats":            {"goals": 0, "assists": 0, "trophies": 0, "caps": 0},
     "ai_history":          [],     # list of {stage, choice, outcome, delta}
     # Coach Career Sim
@@ -240,6 +243,9 @@ DEFAULTS = {
     "coach_narrative":     "",
     "coach_choices":       [],
     "coach_outcome_text":  "",
+    "coach_option_pool_size": 0,
+    "coach_form_state":       "normal",
+    "coach_form_duration":    0,
     "coach_stats":         {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0},
     "coach_history":       [],
     "coach_prefill":       None,   # {name, nationality} pre-filled from player sim transition
@@ -262,6 +268,9 @@ DEFAULTS = {
     "nfl_narrative":        "",
     "nfl_choices":          [],
     "nfl_outcome_text":     "",
+    "nfl_option_pool_size": 0,
+    "nfl_form_state":       "normal",
+    "nfl_form_duration":    0,
     "nfl_stats":            {"touchdowns": 0, "yards": 0, "pro_bowls": 0, "super_bowls": 0},
     "nfl_history":          [],
     # NFL Coach Sim
@@ -272,6 +281,9 @@ DEFAULTS = {
     "nfl_coach_narrative":     "",
     "nfl_coach_choices":       [],
     "nfl_coach_outcome_text":  "",
+    "nfl_coach_option_pool_size": 0,
+    "nfl_coach_form_state":       "normal",
+    "nfl_coach_form_duration":    0,
     "nfl_coach_stats":         {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0},
     "nfl_coach_history":       [],
     "nfl_coach_prefill":       None,   # {name} pre-filled from NFL player sim transition
@@ -283,6 +295,9 @@ DEFAULTS = {
     "nba_narrative":        "",
     "nba_choices":          [],
     "nba_outcome_text":     "",
+    "nba_option_pool_size": 0,
+    "nba_form_state":       "normal",
+    "nba_form_duration":    0,
     "nba_stats":            {"points": 0, "rebounds": 0, "assists": 0, "all_stars": 0, "championships": 0},
     "nba_history":          [],
     # NBA Coach Sim
@@ -293,6 +308,9 @@ DEFAULTS = {
     "nba_coach_narrative":        "",
     "nba_coach_choices":          [],
     "nba_coach_outcome_text":     "",
+    "nba_coach_option_pool_size": 0,
+    "nba_coach_form_state":       "normal",
+    "nba_coach_form_duration":    0,
     "nba_coach_stats":            {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0},
     "nba_coach_history":          [],
     "nba_coach_prefill":          None,   # {name} pre-filled from NBA player sim transition
@@ -1666,6 +1684,142 @@ def _stage_data(position_group: str) -> list:
                 ),
             ],
         ]
+
+_DYNAMIC_DECISION_CONTEXTS = [
+    "during a fierce derby under intense media spotlight",
+    "with fixture congestion forcing rapid recovery decisions",
+    "while contract talks are unresolved in the background",
+    "after a morale dip in the dressing room",
+    "as a title race or playoff push gets tighter each week",
+    "with heavy fan pressure after recent disappointing results",
+    "on a cold away day in a hostile stadium",
+    "after a tactical shake-up from the coaching staff",
+    "while managing fatigue from travel-heavy weeks",
+    "with analysts questioning your recent performances",
+    "after a breakout teammate changes the team hierarchy",
+    "in a must-win stretch that defines the season",
+]
+
+_DYNAMIC_DECISION_APPROACHES = [
+    "focus on fundamentals and reduce avoidable mistakes",
+    "prioritise recovery and training quality over volume",
+    "embrace a risk-heavy tactical adjustment",
+    "double down on your strongest weapon",
+    "work closely with staff to optimise your role",
+    "take a leadership role and raise standards publicly",
+    "study opponent tendencies and exploit matchups",
+    "commit to extra film and scenario preparation",
+    "adjust your style to protect your body and efficiency",
+    "play with controlled aggression and calculated risk",
+    "trust instinct and attack high-value moments",
+    "commit to a discipline-first, low-error approach",
+]
+
+_DYNAMIC_DECISION_TIERS = [
+    ("play it safe and lower your ceiling for this stage", 0.68),
+    ("take a balanced route with modest upside", 0.9),
+    ("choose an assertive plan with major upside", 1.22),
+    ("go all-in on a high-volatility masterstroke", 1.5),
+]
+
+_FORM_MULTIPLIERS = {
+    "normal": 1.0,
+    "injured": 0.62,
+    "hot": 1.35,
+}
+
+
+def _roll_form_state(prefix: str) -> str:
+    state_key = f"{prefix}_form_state"
+    dur_key = f"{prefix}_form_duration"
+    if st.session_state.get(dur_key, 0) > 0:
+        return st.session_state.get(state_key, "normal")
+
+    r = random.random()
+    if r < 0.20:
+        st.session_state[state_key] = "injured"
+        st.session_state[dur_key] = random.choice([1, 2])
+    elif r < 0.38:
+        st.session_state[state_key] = "hot"
+        st.session_state[dur_key] = random.choice([1, 2])
+    else:
+        st.session_state[state_key] = "normal"
+        st.session_state[dur_key] = 0
+    return st.session_state[state_key]
+
+
+def _advance_form_state(prefix: str) -> None:
+    state_key = f"{prefix}_form_state"
+    dur_key = f"{prefix}_form_duration"
+    dur = st.session_state.get(dur_key, 0)
+    if dur <= 0:
+        st.session_state[state_key] = "normal"
+        st.session_state[dur_key] = 0
+        return
+    dur -= 1
+    st.session_state[dur_key] = dur
+    if dur == 0:
+        st.session_state[state_key] = "normal"
+
+
+def _form_banner_text(prefix: str) -> str:
+    state = st.session_state.get(f"{prefix}_form_state", "normal")
+    dur = st.session_state.get(f"{prefix}_form_duration", 0)
+    if state == "injured":
+        return f"🚑 Injury setback active: option quality is reduced for about {max(1, dur)} more stage(s)."
+    if state == "hot":
+        return f"🔥 Hot streak active: elite upside options are unlocked for about {max(1, dur)} more stage(s)."
+    return "⚖️ Form status: normal."
+
+
+def _scaled_delta(delta: dict, multiplier: float) -> dict:
+    scaled = {}
+    for k, v in delta.items():
+        if isinstance(v, (int, float)):
+            nv = int(round(v * multiplier))
+            if v > 0 and multiplier >= 1.2 and nv < 1:
+                nv = 1
+            scaled[k] = max(0, nv)
+        else:
+            scaled[k] = v
+    return scaled
+
+
+def _dynamic_decision_pack(prefix: str, stage: dict, base_choices: list[tuple[str, dict]]) -> dict:
+    form_state = _roll_form_state(prefix)
+    history_key = f"{prefix}_history"
+
+    if form_state == "injured":
+        tiers = _DYNAMIC_DECISION_TIERS[:2]
+    elif form_state == "hot":
+        tiers = _DYNAMIC_DECISION_TIERS[2:]
+    else:
+        tiers = _DYNAMIC_DECISION_TIERS
+
+    pool = []
+    form_mult = _FORM_MULTIPLIERS[form_state]
+    for base_text, base_delta in base_choices:
+        for context in _DYNAMIC_DECISION_CONTEXTS:
+            for approach in _DYNAMIC_DECISION_APPROACHES:
+                for tier_text, tier_mult in tiers:
+                    text = f"{base_text} — {context}; {approach}; {tier_text}."
+                    total_mult = form_mult * tier_mult
+                    pool.append((text, _scaled_delta(base_delta, total_mult)))
+
+    used = {h["choice"] for h in st.session_state.get(history_key, []) if "choice" in h}
+    candidates = [entry for entry in pool if entry[0] not in used]
+    if len(candidates) < 3:
+        candidates = pool
+    picks = random.sample(candidates, 3)
+    return {
+        "choices": [p[0] for p in picks],
+        "stat_deltas": [p[1] for p in picks],
+        "pool_size": len(pool),
+        "form_state": form_state,
+        "stage_id": stage["id"],
+    }
+
+
 def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> dict:
     """Return {narrative, choices: [str, str, str], stat_deltas: [dict, dict, dict]}.
     Falls back to templates when api_key is empty or on any error.
@@ -1674,10 +1828,13 @@ def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> 
     templates = _stage_data(player["position_group"])
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
+    dynamic_pack = _dynamic_decision_pack("ai", stage, [tmpl_a, tmpl_b, tmpl_c])
     fallback = {
         "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
-        "choices":     [tmpl_a[0], tmpl_b[0], tmpl_c[0]],
-        "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+        "choices":     dynamic_pack["choices"],
+        "stat_deltas": dynamic_pack["stat_deltas"],
+        "pool_size":   dynamic_pack["pool_size"],
+        "form_state":  dynamic_pack["form_state"],
     }
     if not api_key:
         return fallback
@@ -1721,8 +1878,10 @@ def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> 
         # Fall back to template values for any missing keys
         return {
             "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
-            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0], lines.get("CHOICE_C") or tmpl_c[0]],
-            "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+            "choices":     fallback["choices"],
+            "stat_deltas": fallback["stat_deltas"],
+            "pool_size":   fallback["pool_size"],
+            "form_state":  fallback["form_state"],
         }
     except Exception as exc:
         import openai as _oai
@@ -1833,6 +1992,9 @@ with tab_ai:
                 st.session_state.ai_narrative        = ""
                 st.session_state.ai_choices          = []
                 st.session_state.ai_outcome_text     = ""
+                st.session_state.ai_option_pool_size = 0
+                st.session_state.ai_form_state       = "normal"
+                st.session_state.ai_form_duration    = 0
                 st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
                 st.session_state.ai_history          = []
                 st.rerun()
@@ -1859,6 +2021,15 @@ with tab_ai:
         with sc4:
             st.metric("🌍 Int'l Caps", stats["caps"])
 
+        form_banner = _form_banner_text("ai")
+        if st.session_state.ai_form_state == "injured":
+            st.warning(form_banner)
+        elif st.session_state.ai_form_state == "hot":
+            st.success(form_banner)
+        else:
+            st.info(form_banner)
+        st.caption(f"Decision pool this stage: {st.session_state.ai_option_pool_size} options.")
+
         st.markdown("---")
 
         # Generate narrative if not yet loaded for this stage
@@ -1867,6 +2038,7 @@ with tab_ai:
                 data = _ai_generate_stage(player, stage, stats, api_key)
             st.session_state.ai_narrative  = data["narrative"]
             st.session_state.ai_choices    = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.ai_option_pool_size = data.get("pool_size", 0)
             st.rerun()
 
         # Show narrative
@@ -1917,6 +2089,7 @@ with tab_ai:
                     "outcome": st.session_state.ai_outcome_text,
                     "delta":   delta,
                 })
+                _advance_form_state("ai")
                 # Advance
                 st.session_state.ai_stage_idx       += 1
                 st.session_state.ai_awaiting_outcome  = False
@@ -1993,6 +2166,9 @@ with tab_ai:
                 st.session_state.ai_narrative        = ""
                 st.session_state.ai_choices          = []
                 st.session_state.ai_outcome_text     = ""
+                st.session_state.ai_option_pool_size = 0
+                st.session_state.ai_form_state       = "normal"
+                st.session_state.ai_form_duration    = 0
                 st.session_state.ai_stats            = {"goals": 0, "assists": 0, "trophies": 0, "caps": 0}
                 st.session_state.ai_history          = []
                 st.rerun()
@@ -2009,6 +2185,9 @@ with tab_ai:
                 st.session_state.coach_narrative        = ""
                 st.session_state.coach_choices          = []
                 st.session_state.coach_outcome_text     = ""
+                st.session_state.coach_option_pool_size = 0
+                st.session_state.coach_form_state       = "normal"
+                st.session_state.coach_form_duration    = 0
                 st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
                 st.session_state.coach_history          = []
                 st.rerun()
@@ -2292,10 +2471,13 @@ def _coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: str)
     templates = _coach_stage_data(manager["philosophy"])
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
+    dynamic_pack = _dynamic_decision_pack("coach", stage, [tmpl_a, tmpl_b, tmpl_c])
     fallback = {
         "narrative":   tmpl_narr.format(name=manager["name"], philosophy=manager["philosophy"]),
-        "choices":     [tmpl_a[0], tmpl_b[0], tmpl_c[0]],
-        "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+        "choices":     dynamic_pack["choices"],
+        "stat_deltas": dynamic_pack["stat_deltas"],
+        "pool_size":   dynamic_pack["pool_size"],
+        "form_state":  dynamic_pack["form_state"],
     }
     if not api_key:
         return fallback
@@ -2338,8 +2520,10 @@ def _coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: str)
                 lines[k.strip()] = v.strip()
         return {
             "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
-            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0], lines.get("CHOICE_C") or tmpl_c[0]],
-            "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+            "choices":     fallback["choices"],
+            "stat_deltas": fallback["stat_deltas"],
+            "pool_size":   fallback["pool_size"],
+            "form_state":  fallback["form_state"],
         }
     except Exception as exc:
         import openai as _oai
@@ -2461,6 +2645,9 @@ with tab_coach:
                 st.session_state.coach_narrative        = ""
                 st.session_state.coach_choices          = []
                 st.session_state.coach_outcome_text     = ""
+                st.session_state.coach_option_pool_size = 0
+                st.session_state.coach_form_state       = "normal"
+                st.session_state.coach_form_duration    = 0
                 st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
                 st.session_state.coach_history          = []
                 st.rerun()
@@ -2486,6 +2673,15 @@ with tab_coach:
         with cs4:
             st.metric("⭐ Reputation",         stats["reputation"])
 
+        form_banner = _form_banner_text("coach")
+        if st.session_state.coach_form_state == "injured":
+            st.warning(form_banner)
+        elif st.session_state.coach_form_state == "hot":
+            st.success(form_banner)
+        else:
+            st.info(form_banner)
+        st.caption(f"Decision pool this stage: {st.session_state.coach_option_pool_size} options.")
+
         st.markdown("---")
 
         # Generate narrative if not yet loaded for this stage
@@ -2494,6 +2690,7 @@ with tab_coach:
                 data = _coach_generate_stage(manager, stage, stats, api_key)
             st.session_state.coach_narrative = data["narrative"]
             st.session_state.coach_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.coach_option_pool_size = data.get("pool_size", 0)
             st.rerun()
 
         # Show narrative
@@ -2541,6 +2738,7 @@ with tab_coach:
                     "outcome": st.session_state.coach_outcome_text,
                     "delta":   delta,
                 })
+                _advance_form_state("coach")
                 st.session_state.coach_stage_idx        += 1
                 st.session_state.coach_awaiting_outcome  = False
                 st.session_state.coach_chosen_option     = None
@@ -2614,6 +2812,9 @@ with tab_coach:
             st.session_state.coach_narrative        = ""
             st.session_state.coach_choices          = []
             st.session_state.coach_outcome_text     = ""
+            st.session_state.coach_option_pool_size = 0
+            st.session_state.coach_form_state       = "normal"
+            st.session_state.coach_form_duration    = 0
             st.session_state.coach_stats            = {"wins": 0, "trophies": 0, "players_developed": 0, "reputation": 0}
             st.session_state.coach_history          = []
             st.rerun()
@@ -3512,10 +3713,13 @@ def _nfl_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) ->
     templates = _nfl_stage_data(player["position_group"])
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
+    dynamic_pack = _dynamic_decision_pack("nfl", stage, [tmpl_a, tmpl_b, tmpl_c])
     fallback = {
         "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
-        "choices":     [tmpl_a[0], tmpl_b[0], tmpl_c[0]],
-        "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+        "choices":     dynamic_pack["choices"],
+        "stat_deltas": dynamic_pack["stat_deltas"],
+        "pool_size":   dynamic_pack["pool_size"],
+        "form_state":  dynamic_pack["form_state"],
     }
     if not api_key:
         return fallback
@@ -3557,8 +3761,10 @@ def _nfl_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) ->
                 lines[k.strip()] = v.strip()
         return {
             "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
-            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0], lines.get("CHOICE_C") or tmpl_c[0]],
-            "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+            "choices":     fallback["choices"],
+            "stat_deltas": fallback["stat_deltas"],
+            "pool_size":   fallback["pool_size"],
+            "form_state":  fallback["form_state"],
         }
     except Exception as exc:
         import openai as _oai
@@ -3665,6 +3871,9 @@ with tab_nfl_player:
                 st.session_state.nfl_narrative        = ""
                 st.session_state.nfl_choices          = []
                 st.session_state.nfl_outcome_text     = ""
+                st.session_state.nfl_option_pool_size = 0
+                st.session_state.nfl_form_state       = "normal"
+                st.session_state.nfl_form_duration    = 0
                 st.session_state.nfl_stats            = {"touchdowns": 0, "yards": 0, "pro_bowls": 0, "super_bowls": 0}
                 st.session_state.nfl_history          = []
                 st.rerun()
@@ -3684,6 +3893,15 @@ with tab_nfl_player:
         with ns3: st.metric("\u2b50 Pro Bowls",        stats["pro_bowls"])
         with ns4: st.metric("\U0001f48d Super Bowls",  stats["super_bowls"])
 
+        form_banner = _form_banner_text("nfl")
+        if st.session_state.nfl_form_state == "injured":
+            st.warning(form_banner)
+        elif st.session_state.nfl_form_state == "hot":
+            st.success(form_banner)
+        else:
+            st.info(form_banner)
+        st.caption(f"Decision pool this stage: {st.session_state.nfl_option_pool_size} options.")
+
         st.markdown("---")
 
         if not st.session_state.nfl_narrative:
@@ -3691,6 +3909,7 @@ with tab_nfl_player:
                 data = _nfl_generate_stage(player, stage, stats, api_key)
             st.session_state.nfl_narrative = data["narrative"]
             st.session_state.nfl_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.nfl_option_pool_size = data.get("pool_size", 0)
             st.rerun()
 
         st.markdown(
@@ -3736,6 +3955,7 @@ with tab_nfl_player:
                     "outcome": st.session_state.nfl_outcome_text,
                     "delta":   delta,
                 })
+                _advance_form_state("nfl")
                 st.session_state.nfl_stage_idx        += 1
                 st.session_state.nfl_awaiting_outcome  = False
                 st.session_state.nfl_chosen_option     = None
@@ -3807,6 +4027,9 @@ with tab_nfl_player:
                 st.session_state.nfl_narrative        = ""
                 st.session_state.nfl_choices          = []
                 st.session_state.nfl_outcome_text     = ""
+                st.session_state.nfl_option_pool_size = 0
+                st.session_state.nfl_form_state       = "normal"
+                st.session_state.nfl_form_duration    = 0
                 st.session_state.nfl_stats            = {"touchdowns": 0, "yards": 0, "pro_bowls": 0, "super_bowls": 0}
                 st.session_state.nfl_history          = []
                 st.rerun()
@@ -3820,6 +4043,9 @@ with tab_nfl_player:
                 st.session_state.nfl_coach_narrative        = ""
                 st.session_state.nfl_coach_choices          = []
                 st.session_state.nfl_coach_outcome_text     = ""
+                st.session_state.nfl_coach_option_pool_size = 0
+                st.session_state.nfl_coach_form_state       = "normal"
+                st.session_state.nfl_coach_form_duration    = 0
                 st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
                 st.session_state.nfl_coach_history          = []
                 st.rerun()
@@ -3960,10 +4186,13 @@ def _nfl_coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: 
     templates = _nfl_coach_stage_data(manager["philosophy"])
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
+    dynamic_pack = _dynamic_decision_pack("nfl_coach", stage, [tmpl_a, tmpl_b, tmpl_c])
     fallback = {
         "narrative":   tmpl_narr.format(name=manager["name"], philosophy=manager["philosophy"]),
-        "choices":     [tmpl_a[0], tmpl_b[0], tmpl_c[0]],
-        "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+        "choices":     dynamic_pack["choices"],
+        "stat_deltas": dynamic_pack["stat_deltas"],
+        "pool_size":   dynamic_pack["pool_size"],
+        "form_state":  dynamic_pack["form_state"],
     }
     if not api_key:
         return fallback
@@ -4005,8 +4234,10 @@ def _nfl_coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: 
                 lines[k.strip()] = v.strip()
         return {
             "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
-            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0], lines.get("CHOICE_C") or tmpl_c[0]],
-            "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+            "choices":     fallback["choices"],
+            "stat_deltas": fallback["stat_deltas"],
+            "pool_size":   fallback["pool_size"],
+            "form_state":  fallback["form_state"],
         }
     except Exception as exc:
         import openai as _oai
@@ -4127,6 +4358,9 @@ with tab_nfl_coach:
                 st.session_state.nfl_coach_narrative        = ""
                 st.session_state.nfl_coach_choices          = []
                 st.session_state.nfl_coach_outcome_text     = ""
+                st.session_state.nfl_coach_option_pool_size = 0
+                st.session_state.nfl_coach_form_state       = "normal"
+                st.session_state.nfl_coach_form_duration    = 0
                 st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
                 st.session_state.nfl_coach_history          = []
                 st.rerun()
@@ -4146,6 +4380,15 @@ with tab_nfl_coach:
         with ncs3: st.metric("\U0001f331 Players Developed", stats["players_developed"])
         with ncs4: st.metric("\u2b50 Reputation",            stats["reputation"])
 
+        form_banner = _form_banner_text("nfl_coach")
+        if st.session_state.nfl_coach_form_state == "injured":
+            st.warning(form_banner)
+        elif st.session_state.nfl_coach_form_state == "hot":
+            st.success(form_banner)
+        else:
+            st.info(form_banner)
+        st.caption(f"Decision pool this stage: {st.session_state.nfl_coach_option_pool_size} options.")
+
         st.markdown("---")
 
         if not st.session_state.nfl_coach_narrative:
@@ -4153,6 +4396,7 @@ with tab_nfl_coach:
                 data = _nfl_coach_generate_stage(manager, stage, stats, api_key)
             st.session_state.nfl_coach_narrative = data["narrative"]
             st.session_state.nfl_coach_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.nfl_coach_option_pool_size = data.get("pool_size", 0)
             st.rerun()
 
         st.markdown(
@@ -4198,6 +4442,7 @@ with tab_nfl_coach:
                     "outcome": st.session_state.nfl_coach_outcome_text,
                     "delta":   delta,
                 })
+                _advance_form_state("nfl_coach")
                 st.session_state.nfl_coach_stage_idx        += 1
                 st.session_state.nfl_coach_awaiting_outcome  = False
                 st.session_state.nfl_coach_chosen_option     = None
@@ -4267,6 +4512,9 @@ with tab_nfl_coach:
             st.session_state.nfl_coach_narrative        = ""
             st.session_state.nfl_coach_choices          = []
             st.session_state.nfl_coach_outcome_text     = ""
+            st.session_state.nfl_coach_option_pool_size = 0
+            st.session_state.nfl_coach_form_state       = "normal"
+            st.session_state.nfl_coach_form_duration    = 0
             st.session_state.nfl_coach_stats            = {"wins": 0, "super_bowls": 0, "players_developed": 0, "reputation": 0}
             st.session_state.nfl_coach_history          = []
             st.rerun()
@@ -4774,10 +5022,13 @@ def _nba_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) ->
     templates = _nba_stage_data(player["position_group"])
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
+    dynamic_pack = _dynamic_decision_pack("nba", stage, [tmpl_a, tmpl_b, tmpl_c])
     fallback = {
         "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
-        "choices":     [tmpl_a[0], tmpl_b[0], tmpl_c[0]],
-        "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+        "choices":     dynamic_pack["choices"],
+        "stat_deltas": dynamic_pack["stat_deltas"],
+        "pool_size":   dynamic_pack["pool_size"],
+        "form_state":  dynamic_pack["form_state"],
     }
     if not api_key:
         return fallback
@@ -4820,8 +5071,10 @@ def _nba_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) ->
                 lines[k.strip()] = v.strip()
         return {
             "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
-            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0], lines.get("CHOICE_C") or tmpl_c[0]],
-            "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+            "choices":     fallback["choices"],
+            "stat_deltas": fallback["stat_deltas"],
+            "pool_size":   fallback["pool_size"],
+            "form_state":  fallback["form_state"],
         }
     except Exception as exc:
         import openai as _oai
@@ -4930,6 +5183,9 @@ with tab_nba_player:
                 st.session_state.nba_narrative        = ""
                 st.session_state.nba_choices          = []
                 st.session_state.nba_outcome_text     = ""
+                st.session_state.nba_option_pool_size = 0
+                st.session_state.nba_form_state       = "normal"
+                st.session_state.nba_form_duration    = 0
                 st.session_state.nba_stats            = {"points": 0, "rebounds": 0, "assists": 0, "all_stars": 0, "championships": 0}
                 st.session_state.nba_history          = []
                 st.rerun()
@@ -4950,6 +5206,15 @@ with tab_nba_player:
         with nbs4: st.metric("\u2b50 All-Stars",          stats["all_stars"])
         with nbs5: st.metric("\U0001f3c6 Championships",  stats["championships"])
 
+        form_banner = _form_banner_text("nba")
+        if st.session_state.nba_form_state == "injured":
+            st.warning(form_banner)
+        elif st.session_state.nba_form_state == "hot":
+            st.success(form_banner)
+        else:
+            st.info(form_banner)
+        st.caption(f"Decision pool this stage: {st.session_state.nba_option_pool_size} options.")
+
         st.markdown("---")
 
         if not st.session_state.nba_narrative:
@@ -4957,6 +5222,7 @@ with tab_nba_player:
                 data = _nba_generate_stage(player, stage, stats, api_key)
             st.session_state.nba_narrative = data["narrative"]
             st.session_state.nba_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.nba_option_pool_size = data.get("pool_size", 0)
             st.rerun()
 
         st.markdown(
@@ -5003,6 +5269,7 @@ with tab_nba_player:
                     "outcome": st.session_state.nba_outcome_text,
                     "delta":   delta,
                 })
+                _advance_form_state("nba")
                 st.session_state.nba_stage_idx        += 1
                 st.session_state.nba_awaiting_outcome  = False
                 st.session_state.nba_chosen_option     = None
@@ -5075,6 +5342,9 @@ with tab_nba_player:
                 st.session_state.nba_narrative        = ""
                 st.session_state.nba_choices          = []
                 st.session_state.nba_outcome_text     = ""
+                st.session_state.nba_option_pool_size = 0
+                st.session_state.nba_form_state       = "normal"
+                st.session_state.nba_form_duration    = 0
                 st.session_state.nba_stats            = {"points": 0, "rebounds": 0, "assists": 0, "all_stars": 0, "championships": 0}
                 st.session_state.nba_history          = []
                 st.rerun()
@@ -5088,6 +5358,9 @@ with tab_nba_player:
                 st.session_state.nba_coach_narrative        = ""
                 st.session_state.nba_coach_choices          = []
                 st.session_state.nba_coach_outcome_text     = ""
+                st.session_state.nba_coach_option_pool_size = 0
+                st.session_state.nba_coach_form_state       = "normal"
+                st.session_state.nba_coach_form_duration    = 0
                 st.session_state.nba_coach_stats            = {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0}
                 st.session_state.nba_coach_history          = []
                 st.rerun()
@@ -5228,10 +5501,13 @@ def _nba_coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: 
     templates = _nba_coach_stage_data(manager["philosophy"])
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
+    dynamic_pack = _dynamic_decision_pack("nba_coach", stage, [tmpl_a, tmpl_b, tmpl_c])
     fallback = {
         "narrative":   tmpl_narr.format(name=manager["name"], philosophy=manager["philosophy"]),
-        "choices":     [tmpl_a[0], tmpl_b[0], tmpl_c[0]],
-        "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+        "choices":     dynamic_pack["choices"],
+        "stat_deltas": dynamic_pack["stat_deltas"],
+        "pool_size":   dynamic_pack["pool_size"],
+        "form_state":  dynamic_pack["form_state"],
     }
     if not api_key:
         return fallback
@@ -5273,8 +5549,10 @@ def _nba_coach_generate_stage(manager: dict, stage: dict, stats: dict, api_key: 
                 lines[k.strip()] = v.strip()
         return {
             "narrative":   lines.get("NARRATIVE") or fallback["narrative"],
-            "choices":     [lines.get("CHOICE_A") or tmpl_a[0], lines.get("CHOICE_B") or tmpl_b[0], lines.get("CHOICE_C") or tmpl_c[0]],
-            "stat_deltas": [tmpl_a[1], tmpl_b[1], tmpl_c[1]],
+            "choices":     fallback["choices"],
+            "stat_deltas": fallback["stat_deltas"],
+            "pool_size":   fallback["pool_size"],
+            "form_state":  fallback["form_state"],
         }
     except Exception as exc:
         import openai as _oai
@@ -5395,6 +5673,9 @@ with tab_nba_coach:
                 st.session_state.nba_coach_narrative        = ""
                 st.session_state.nba_coach_choices          = []
                 st.session_state.nba_coach_outcome_text     = ""
+                st.session_state.nba_coach_option_pool_size = 0
+                st.session_state.nba_coach_form_state       = "normal"
+                st.session_state.nba_coach_form_duration    = 0
                 st.session_state.nba_coach_stats            = {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0}
                 st.session_state.nba_coach_history          = []
                 st.rerun()
@@ -5414,6 +5695,15 @@ with tab_nba_coach:
         with nbcs3: st.metric("\U0001f331 Players Developed",  stats["players_developed"])
         with nbcs4: st.metric("\u2b50 Reputation",             stats["reputation"])
 
+        form_banner = _form_banner_text("nba_coach")
+        if st.session_state.nba_coach_form_state == "injured":
+            st.warning(form_banner)
+        elif st.session_state.nba_coach_form_state == "hot":
+            st.success(form_banner)
+        else:
+            st.info(form_banner)
+        st.caption(f"Decision pool this stage: {st.session_state.nba_coach_option_pool_size} options.")
+
         st.markdown("---")
 
         if not st.session_state.nba_coach_narrative:
@@ -5421,6 +5711,7 @@ with tab_nba_coach:
                 data = _nba_coach_generate_stage(manager, stage, stats, api_key)
             st.session_state.nba_coach_narrative = data["narrative"]
             st.session_state.nba_coach_choices   = list(zip(data["choices"], data["stat_deltas"]))
+            st.session_state.nba_coach_option_pool_size = data.get("pool_size", 0)
             st.rerun()
 
         st.markdown(
@@ -5466,6 +5757,7 @@ with tab_nba_coach:
                     "outcome": st.session_state.nba_coach_outcome_text,
                     "delta":   delta,
                 })
+                _advance_form_state("nba_coach")
                 st.session_state.nba_coach_stage_idx        += 1
                 st.session_state.nba_coach_awaiting_outcome  = False
                 st.session_state.nba_coach_chosen_option     = None
@@ -5535,6 +5827,9 @@ with tab_nba_coach:
             st.session_state.nba_coach_narrative        = ""
             st.session_state.nba_coach_choices          = []
             st.session_state.nba_coach_outcome_text     = ""
+            st.session_state.nba_coach_option_pool_size = 0
+            st.session_state.nba_coach_form_state       = "normal"
+            st.session_state.nba_coach_form_duration    = 0
             st.session_state.nba_coach_stats            = {"wins": 0, "championships": 0, "players_developed": 0, "reputation": 0}
             st.session_state.nba_coach_history          = []
             st.rerun()

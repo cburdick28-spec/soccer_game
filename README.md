@@ -52,6 +52,7 @@ disciplinary control, punishments, VAR pressure, bribery attempts, and favoritis
 
 ## 📊 Features
 - **91 legendary players** across all eras (1960s → 2020s)
+- **Dynamic sim decision engine**: every career sim now generates **500+ decisions per stage** with injury setbacks and hot-streak boosts affecting option quality
 - **4 position groups**: Goalkeeper, Defender, Midfielder, Forward
 - **10+ leagues**: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, MLS, Eredivisie, Primeira Liga, Saudi Pro League, and more
 - **6 continents**: Europe, South America, Africa, Asia, North America
