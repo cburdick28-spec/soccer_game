@@ -1788,7 +1788,7 @@ def _scaled_delta(delta: dict, multiplier: float) -> dict:
 def _nba_points_style_multiplier(style: str) -> float:
     s = style.lower()
     if "scor" in s:
-        return 1.9
+        return 3.0
     if "slasher" in s or "post scorer" in s:
         return 1.5
     if "two-way" in s:
