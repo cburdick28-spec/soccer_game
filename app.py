@@ -1807,6 +1807,19 @@ def _nba_points_style_multiplier(style: str) -> float:
     return 1.28
 
 
+def _goalkeeper_clean_sheet_multiplier(style: str) -> float:
+    s = style.lower()
+    if "big-match" in s or "shot-stopping" in s:
+        return 3.4
+    if "penalty-save" in s:
+        return 3.2
+    if "commanding aerial" in s:
+        return 3.0
+    if "sweeper" in s or "distribution" in s:
+        return 2.8
+    return 3.0
+
+
 def _dynamic_decision_pack(prefix: str, stage: dict, base_choices: list[tuple[str, dict]]) -> dict:
     form_state = _roll_form_state(prefix)
     history_key = f"{prefix}_history"
@@ -1851,10 +1864,20 @@ def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> 
     stage_variants = templates[stage["idx"]]
     tmpl_narr, tmpl_a, tmpl_b, tmpl_c = random.choice(stage_variants)
     dynamic_pack = _dynamic_decision_pack("ai", stage, [tmpl_a, tmpl_b, tmpl_c])
+    adjusted_deltas = dynamic_pack["stat_deltas"]
+    if player["position_group"] == "Goalkeeper":
+        cs_mult = _goalkeeper_clean_sheet_multiplier(player["style"])
+        adjusted_deltas = []
+        for delta in dynamic_pack["stat_deltas"]:
+            nd = dict(delta)
+            if nd.get("assists", 0):
+                nd["assists"] = max(1, int(round(nd["assists"] * cs_mult)))
+            adjusted_deltas.append(nd)
+
     fallback = {
         "narrative":   tmpl_narr.format(name=player["name"], style=player["style"]),
         "choices":     dynamic_pack["choices"],
-        "stat_deltas": dynamic_pack["stat_deltas"],
+        "stat_deltas": adjusted_deltas,
         "pool_size":   dynamic_pack["pool_size"],
         "form_state":  dynamic_pack["form_state"],
     }
