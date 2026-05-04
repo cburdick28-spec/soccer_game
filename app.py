@@ -884,6 +884,15 @@ _AI_PLAYING_STYLES = [
     "Box-to-Box Engine", "Clinical Finisher",
 ]
 
+_AI_GOALKEEPER_STYLES = [
+    "Shot-Stopping Specialist",
+    "Sweeper Keeper",
+    "Penalty-Save Expert",
+    "Commanding Aerial Keeper",
+    "Elite Distribution Keeper",
+    "Big-Match Wall",
+]
+
 _AI_EXTRA_NATIONALITIES = [
     "Mexico", "USA", "Japan", "South Korea", "Australia",
     "Colombia", "Chile", "Nigeria", "Algeria", "Russia",
@@ -1906,8 +1915,9 @@ def _ai_generate_stage(player: dict, stage: dict, stats: dict, api_key: str) -> 
 def _ai_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dict, api_key: str) -> str:
     """Return outcome narrative string."""
     parts = []
+    secondary_label = "clean sheets" if player["position_group"] == "Goalkeeper" else "assists"
     if delta.get("goals"):    parts.append(f"{delta['goals']} goals")
-    if delta.get("assists"):  parts.append(f"{delta['assists']} assists")
+    if delta.get("assists"):  parts.append(f"{delta['assists']} {secondary_label}")
     if delta.get("trophies"): parts.append(f"{delta['trophies']} trophies")
     if delta.get("caps"):     parts.append(f"{delta['caps']} international caps")
     stat_str = ", ".join(parts) if parts else "valuable experience"
@@ -1945,8 +1955,23 @@ def _ai_generate_outcome(player: dict, stage: dict, choice_text: str, delta: dic
         return fallback
 
 
-def _career_rating(stats: dict) -> tuple[int, str]:
+def _career_rating(player: dict, stats: dict) -> tuple[int, str]:
     """Return (0-100 rating, badge label) based on accumulated stats (8-stage career)."""
+    if player["position_group"] == "Goalkeeper":
+        # Goalkeepers are judged more by silverware, longevity, and clean-sheet reliability.
+        score = (
+            stats["trophies"] * 20
+            + stats["caps"] * 1.1
+            + stats["assists"] * 3.2  # assists stat is used as clean-sheet proxy in GK templates
+            + stats["goals"] * 0.2
+        )
+        if score >= 460: return 97, "🧤 GOAT Goalkeeper"
+        if score >= 350: return 93, "🧱 World-Class Keeper"
+        if score >= 260: return 88, "⭐ Elite Shot-Stopper"
+        if score >= 180: return 82, "📈 Top-Level No. 1"
+        if score >= 110: return 75, "✅ Reliable First-Choice Keeper"
+        return 65, "🎓 Developing Goalkeeper"
+
     score = (
         stats["goals"] * 1.0
         + stats["assists"] * 0.8
@@ -1959,6 +1984,12 @@ def _career_rating(stats: dict) -> tuple[int, str]:
     if score >= 220: return 82, "📈 Very Good"
     if score >= 130: return 75, "✅ Solid Pro"
     return 65, "🎓 Journeyman"
+
+
+def _ai_style_options(position_group: str) -> list[str]:
+    if position_group == "Goalkeeper":
+        return _AI_GOALKEEPER_STYLES
+    return _AI_PLAYING_STYLES
 
 
 # ── AI Career Sim: tab rendering ─────────────────────────────────────────────
@@ -1987,7 +2018,11 @@ with tab_ai:
             ai_nat = st.selectbox("Nationality", nat_options, key="ai_nat_input")
         with col_form2:
             ai_pos = st.selectbox("Position Group", list(POSITIONS.keys()), key="ai_pos_input")
-            ai_style = st.selectbox("Playing Style", _AI_PLAYING_STYLES, key="ai_style_input")
+            style_options = _ai_style_options(ai_pos)
+            current_style = st.session_state.get("ai_style_input", style_options[0])
+            if current_style not in style_options:
+                st.session_state.ai_style_input = style_options[0]
+            ai_style = st.selectbox("Playing Style", style_options, key="ai_style_input")
 
         if st.button("🚀 Start Career", key="ai_start"):
             if not ai_name.strip():
@@ -2025,10 +2060,12 @@ with tab_ai:
 
         # Live stats bar
         sc1, sc2, sc3, sc4 = st.columns(4)
+        secondary_icon = "🧤" if player["position_group"] == "Goalkeeper" else "🎯"
+        secondary_label = "Clean Sheets" if player["position_group"] == "Goalkeeper" else "Assists"
         with sc1:
             st.metric("⚽ Goals",     stats["goals"])
         with sc2:
-            st.metric("🎯 Assists",   stats["assists"])
+            st.metric(f"{secondary_icon} {secondary_label}",   stats["assists"])
         with sc3:
             st.metric("🏆 Trophies",  stats["trophies"])
         with sc4:
@@ -2083,8 +2120,10 @@ with tab_ai:
 
             # Stat gains
             gain_parts = []
+            secondary_gain_label = "clean sheets" if player["position_group"] == "Goalkeeper" else "assists"
+            secondary_gain_icon = "🧤" if player["position_group"] == "Goalkeeper" else "🎯"
             if delta.get("goals"):    gain_parts.append(f"⚽ +{delta['goals']} goals")
-            if delta.get("assists"):  gain_parts.append(f"🎯 +{delta['assists']} assists")
+            if delta.get("assists"):  gain_parts.append(f"{secondary_gain_icon} +{delta['assists']} {secondary_gain_label}")
             if delta.get("trophies"): gain_parts.append(f"🏆 +{delta['trophies']} trophies")
             if delta.get("caps"):     gain_parts.append(f"🌍 +{delta['caps']} caps")
             if gain_parts:
@@ -2137,7 +2176,7 @@ with tab_ai:
     elif ai_stage_idx >= len(_AI_CAREER_STAGES):
         player = st.session_state.ai_player
         stats  = st.session_state.ai_stats
-        rating, badge = _career_rating(stats)
+        rating, badge = _career_rating(player, stats)
         flag   = FLAGS.get(player["nationality"], "🌍")
 
         st.markdown(f"## 🏁 {player['name']} — Career Over")
@@ -2151,8 +2190,10 @@ with tab_ai:
 
         # Final stats
         s1, s2, s3, s4 = st.columns(4)
+        secondary_final_icon = "🧤" if player["position_group"] == "Goalkeeper" else "🎯"
+        secondary_final_label = "Career Clean Sheets" if player["position_group"] == "Goalkeeper" else "Career Assists"
         with s1: st.metric("⚽ Career Goals",    stats["goals"])
-        with s2: st.metric("🎯 Career Assists",   stats["assists"])
+        with s2: st.metric(f"{secondary_final_icon} {secondary_final_label}",   stats["assists"])
         with s3: st.metric("🏆 Trophies Won",     stats["trophies"])
         with s4: st.metric("🌍 International Caps", stats["caps"])
 
