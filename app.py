@@ -3211,11 +3211,6 @@ def _referee_generate_outcome(profile: dict, stage: dict, choice_text: str, delt
     if delta.get("corruption"): stat_parts.append(f"{delta['corruption']} corruption risk")
     impact = ", ".join(stat_parts) if stat_parts else "valuable refereeing experience"
 
-    if delta.get("corruption", 0) >= 10:
-        return (
-            f"The decision from your {stage['name']} assignment triggers immediate scrutiny and whispers of manipulation. "
-            f"Official reviews follow, and your profile is damaged despite short-term control of the match ({impact})."
-        )
     if delta.get("integrity", 0) >= 10:
         return (
             f"Your handling of the incident becomes an integrity case-study for younger officials. "
@@ -3230,6 +3225,21 @@ def _referee_generate_outcome(profile: dict, stage: dict, choice_text: str, delt
         f"You navigate another complicated match sequence and keep control through your refereeing style. "
         f"The committee logs this stage as a meaningful contribution to your career record ({impact})."
     )
+
+
+def _referee_resolve_corruption(delta: dict) -> tuple[dict, bool, int]:
+    """Apply corruption only when caught; otherwise keep corruption at 0 for this stage."""
+    applied_delta = dict(delta)
+    risk = max(0, int(delta.get("corruption", 0) or 0))
+    applied_delta["corruption"] = 0
+    caught = False
+    if risk > 0:
+        # Higher-risk actions are more likely to be detected by integrity review.
+        caught_probability = min(0.9, 0.12 + risk * 0.05)
+        caught = random.random() < caught_probability
+        if caught:
+            applied_delta["corruption"] = risk
+    return applied_delta, caught, risk
 
 
 def _referee_career_rating(stats: dict) -> tuple[int, str]:
@@ -3344,19 +3354,32 @@ with tab_referee:
             if delta.get("accuracy"):   gains.append(f"🎯 +{delta['accuracy']} accuracy")
             if delta.get("authority"):  gains.append(f"🛡️ +{delta['authority']} authority")
             if delta.get("integrity"):  gains.append(f"🤝 +{delta['integrity']} integrity")
-            if delta.get("corruption"): gains.append(f"🚨 +{delta['corruption']} corruption")
+            if delta.get("corruption"): gains.append(f"🚨 +{delta['corruption']} corruption (only if caught)")
             if gains:
                 st.markdown("**Career impact:** " + "  ·  ".join(gains))
 
             next_label = "▶️ Next Stage" if ref_stage_idx < len(_REFEREE_STAGES) - 1 else "🏁 Retire & See Legacy"
             if st.button(next_label, key="ref_next_stage"):
-                for k, v in delta.items():
+                applied_delta, caught, risk = _referee_resolve_corruption(delta)
+                for k, v in applied_delta.items():
                     st.session_state.referee_stats[k] += v
+
+                resolved_outcome = st.session_state.referee_outcome_text
+                if risk > 0 and caught:
+                    resolved_outcome += (
+                        f" Integrity review later identifies irregular patterns and you are caught, "
+                        f"adding {risk} corruption points to your record."
+                    )
+                elif risk > 0 and not caught:
+                    resolved_outcome += (
+                        " No conclusive integrity evidence emerges after review, so your corruption record does not increase."
+                    )
+
                 st.session_state.referee_history.append({
                     "stage": stage["name"],
                     "choice": choice_text,
-                    "outcome": st.session_state.referee_outcome_text,
-                    "delta": delta,
+                    "outcome": resolved_outcome,
+                    "delta": applied_delta,
                 })
                 st.session_state.referee_stage_idx        += 1
                 st.session_state.referee_awaiting_outcome  = False
