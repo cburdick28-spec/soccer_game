@@ -2977,6 +2977,14 @@ _REF_MATCH_CONTEXTS = [
     "domestic cup final",
     "international qualifier",
     "world tournament group match",
+    "super cup final",
+    "cup replay on a heavy pitch",
+    "continental playoff decider",
+    "championship playoff final",
+    "title-clinching away fixture",
+    "high-altitude international friendly",
+    "snowy winter league fixture",
+    "newly promoted club home opener",
 ]
 
 _REF_INCIDENTS = [
@@ -2990,6 +2998,16 @@ _REF_INCIDENTS = [
     ("coach stepping outside technical area to provoke", 5, 8, 6),
     ("violent conduct off the ball spotted by assistant", 9, 10, 8),
     ("possible offside interfering with play before a goal", 8, 6, 6),
+    ("last-man tug near the edge of the box", 8, 9, 6),
+    ("deliberate handball to stop a promising attack", 7, 8, 6),
+    ("reckless aerial collision at a corner kick", 7, 9, 5),
+    ("player feigning a head injury to stop play", 6, 7, 7),
+    ("assistant flags an unseen stamp after the ball is gone", 9, 10, 8),
+    ("possible encroachment before a penalty rebound", 8, 6, 6),
+    ("defender shielding ball while keeper claims obstruction", 7, 6, 5),
+    ("captain surrounding referee to influence a decision", 6, 9, 5),
+    ("keeper handling outside area under pressure", 8, 8, 6),
+    ("possible second yellow in first ten minutes", 7, 9, 5),
 ]
 
 _REF_DISCIPLINARY_RESPONSES = [
@@ -2997,6 +3015,8 @@ _REF_DISCIPLINARY_RESPONSES = [
     ("show a yellow card immediately and reset disciplinary line", 6, 6, 5, 0),
     ("show a straight red card and file full misconduct details", 9, 9, 8, 0),
     ("consult assistant and VAR, then enforce strongest justified sanction", 8, 7, 7, 0),
+    ("delay restart, isolate the main aggressor, then sanction decisively", 7, 8, 6, 0),
+    ("book multiple offenders to re-establish control after dissent wave", 6, 9, 5, 0),
 ]
 
 _REF_BRIBERY_ACTORS = [
@@ -3010,6 +3030,16 @@ _REF_BRIBERY_ACTORS = [
     "sponsor representative",
     "hospitality executive",
     "media broker",
+    "club owner advisor",
+    "sports-law intermediary",
+    "retired referee with federation links",
+    "ultra group representative",
+    "stadium operations manager",
+    "youth academy director",
+    "national team staff coordinator",
+    "commercial rights consultant",
+    "local politician tied to the club",
+    "high-profile former player",
 ]
 
 _REF_BRIBE_OFFERS = [
@@ -3019,6 +3049,12 @@ _REF_BRIBE_OFFERS = [
     "VIP hospitality for the next tournament",
     "an expensive watch delivered anonymously",
     "a promise of easier assignments through contacts",
+    "investment access in a private syndicate",
+    "high-value gift cards routed through a proxy",
+    "sponsorship deal for a family business",
+    "paid consulting role with no duties attached",
+    "offshore transfer via third-party shell account",
+    "mortgage relief arranged by club-connected financiers",
 ]
 
 _REF_BRIBERY_RESPONSES = [
@@ -3026,6 +3062,8 @@ _REF_BRIBERY_RESPONSES = [
     ("reject privately but choose not to file an official report", 3, 2, 2, 0),
     ("delay action and keep communication channel open for leverage", -2, -3, -8, 8),
     ("accept the offer and quietly adjust borderline decisions", -6, -6, -14, 14),
+    ("record evidence covertly and coordinate a sting with investigators", 7, 6, 16, -6),
+    ("inform federation anonymously without exposing full source chain", 4, 3, 6, -1),
 ]
 
 _REF_FAVORITISM_SCENARIOS = [
@@ -3037,6 +3075,14 @@ _REF_FAVORITISM_SCENARIOS = [
     "a former club where you once played",
     "a local association asking for leniency in cards",
     "a title-contending giant expecting benefit of doubt",
+    "a relegation-threatened side begging for compassion",
+    "social media clips accusing you of anti-club bias",
+    "pre-match tunnel pressure from senior players",
+    "club legends publicly questioning your neutrality",
+    "regional rivalry with political undertones in the stands",
+    "late-season narratives about protecting league 'brands'",
+    "a host broadcaster constantly replaying only one side's fouls",
+    "league executives emphasizing entertainment over strict enforcement",
 ]
 
 _REF_FAVORITISM_RESPONSES = [
@@ -3044,6 +3090,8 @@ _REF_FAVORITISM_RESPONSES = [
     ("balance optics by splitting doubtful calls evenly regardless of merit", -1, 1, -5, 4),
     ("lean subtly toward one side in non-obvious moments", -4, -3, -9, 8),
     ("double-down on objective process and use team communication to explain key calls", 8, 6, 9, -1),
+    ("slow key restarts for one team to reduce their tactical edge", -3, -2, -8, 6),
+    ("insist on strict protocol and transparent explanation after each major call", 8, 7, 11, -2),
 ]
 
 _REF_PUNISHMENT_EVENTS = [
@@ -3057,6 +3105,16 @@ _REF_PUNISHMENT_EVENTS = [
     "mocking applause directed at your decision",
     "mass bench reaction around fourth official",
     "goalkeeper leaving line early multiple times",
+    "substitute warming up behind goal interfering with play",
+    "medical staff entering field without permission",
+    "technical staff delaying substitution board process",
+    "projectile thrown from stands toward corner taker",
+    "captain refusing to control teammates after warning",
+    "persistent shirt-pulling at every set piece",
+    "manager repeatedly contesting added time amount",
+    "player removing shirt and provoking away supporters",
+    "defender intentionally blocking quick free-kick restart",
+    "goalkeeper feigning injury to break momentum",
 ]
 
 _REF_PUNISHMENT_RESPONSES = [
@@ -3064,6 +3122,8 @@ _REF_PUNISHMENT_RESPONSES = [
     ("issue strongest legal sanction available and record full report", 8, 9, 7, 0),
     ("manage verbally to keep game flowing but avoid cards", 2, 1, 0, 0),
     ("target one side with harsher discipline than similar opposite incidents", -3, -2, -7, 7),
+    ("pause play and use captains to reset conduct expectations before restart", 6, 7, 6, 0),
+    ("dismiss technical staff member and escalate post-match disciplinary filing", 7, 8, 7, 0),
 ]
 
 
