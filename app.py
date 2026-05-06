@@ -3126,6 +3126,40 @@ _REF_PUNISHMENT_RESPONSES = [
     ("dismiss technical staff member and escalate post-match disciplinary filing", 7, 8, 7, 0),
 ]
 
+_REF_CHAOS_SCENARIOS = [
+    "VAR system goes down minutes before a crucial penalty check",
+    "stadium floodlights fail during a title-deciding match",
+    "a second ball enters play during a one-on-one chance",
+    "mass crowd unrest erupts behind one goal after a red card",
+    "an assistant referee pulls up injured mid-game",
+    "fourth official headset communication completely fails",
+    "goal net tears right before a decisive corner",
+    "captains refuse handshake after an explosive tunnel clash",
+    "a fan runs onto the pitch during open play",
+    "projectiles repeatedly land near the corner flag",
+    "heavy fog makes far-side offside judgment nearly impossible",
+    "lightning warning forces immediate temporary suspension",
+    "keepers from both teams claim laser pointers in the stands",
+    "a mistaken identity caution is spotted by VAR",
+    "both benches surround you after a disallowed late goal",
+    "snow buildup erases penalty-area markings",
+    "a viral social clip wrongly accuses you in real time",
+    "security warns of a planned coordinated pitch invasion",
+    "broadcast audio picks up abusive language from benches",
+    "a player collapses with cramp amid active counterattack",
+]
+
+_REF_CHAOS_RESPONSES = [
+    ("suspend play, coordinate with security and officials, then restart only when conditions are safe", 8, 9, 10, 0),
+    ("continue quickly to preserve flow despite unstable conditions", -2, 3, -4, 0),
+    ("use protocol strictly, announce decisions clearly to both captains, and document everything", 7, 8, 11, 0),
+    ("make improvised calls without team consultation to force control fast", 1, 4, -3, 0),
+    ("abandon the match and file an urgent integrity and safety report", 6, 7, 12, 0),
+    ("restart with minimal explanation, risking confusion and backlash", -3, 2, -5, 0),
+    ("escalate to federation operations center and enforce emergency contingency procedures", 8, 8, 12, -1),
+    ("quietly favor the less aggressive side to calm tensions", -4, -2, -8, 6),
+]
+
 
 def _referee_stage_option_pool(stage_id: str) -> list[tuple[str, dict]]:
     options = []
@@ -3175,6 +3209,19 @@ def _referee_stage_option_pool(stage_id: str) -> list[tuple[str, dict]]:
         for response, d_acc, d_auth, d_integrity, d_corruption in _REF_PUNISHMENT_RESPONSES:
             options.append((
                 f"After {event}, you {response}.",
+                {
+                    "matches": 1,
+                    "accuracy": d_acc,
+                    "authority": d_auth,
+                    "integrity": d_integrity,
+                    "corruption": max(0, d_corruption),
+                },
+            ))
+
+    for scenario in _REF_CHAOS_SCENARIOS:
+        for response, d_acc, d_auth, d_integrity, d_corruption in _REF_CHAOS_RESPONSES:
+            options.append((
+                f"Chaos event: {scenario}; you {response}.",
                 {
                     "matches": 1,
                     "accuracy": d_acc,
