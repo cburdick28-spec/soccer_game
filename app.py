@@ -2910,7 +2910,7 @@ _REFEREE_STYLES = [
     "Calm Communicator",
 ]
 
-_REFEREE_STAGES = [
+_REFEREE_PHASES = [
     {"idx": 0, "id": "academy",      "name": "Grassroots & Youth Leagues",   "age": "24–28", "icon": "🌱"},
     {"idx": 1, "id": "regional",     "name": "Regional Senior Football",      "age": "28–32", "icon": "🟨"},
     {"idx": 2, "id": "pro_entry",    "name": "Professional Debut Season",     "age": "32–36", "icon": "📋"},
@@ -2919,6 +2919,18 @@ _REFEREE_STAGES = [
     {"idx": 5, "id": "world_stage",  "name": "World Tournament Cycle",        "age": "44–48", "icon": "🏟️"},
     {"idx": 6, "id": "legacy_years", "name": "Elite Finals Specialist",       "age": "48–52", "icon": "🏆"},
     {"idx": 7, "id": "mentor",       "name": "Mentor, Assessor & Final Whistle", "age": "52+", "icon": "🏁"},
+]
+
+_REF_TOTAL_MATCHES = 100
+_REFEREE_STAGES = [
+    {
+        "idx": i,
+        "id": _REFEREE_PHASES[(i * len(_REFEREE_PHASES)) // _REF_TOTAL_MATCHES]["id"],
+        "name": _REFEREE_PHASES[(i * len(_REFEREE_PHASES)) // _REF_TOTAL_MATCHES]["name"],
+        "age": _REFEREE_PHASES[(i * len(_REFEREE_PHASES)) // _REF_TOTAL_MATCHES]["age"],
+        "icon": _REFEREE_PHASES[(i * len(_REFEREE_PHASES)) // _REF_TOTAL_MATCHES]["icon"],
+    }
+    for i in range(_REF_TOTAL_MATCHES)
 ]
 
 _REFEREE_STAGE_NARRATIVES = {
@@ -3327,7 +3339,7 @@ with tab_referee:
             ref_style = st.selectbox("Officiating Style", _REFEREE_STYLES, key="ref_style_input")
 
         option_count = len(_referee_stage_option_pool("academy"))
-        st.caption(f"🧠 Referee decision bank loaded: {option_count} unique options per stage template.")
+        st.caption(f"🧠 Referee decision bank loaded: {option_count} unique options per match template across a 100-match career.")
 
         if st.button("🚀 Start Referee Career", key="ref_start"):
             if not ref_name.strip():
@@ -3353,7 +3365,7 @@ with tab_referee:
         stage = _REFEREE_STAGES[ref_stage_idx]
         stats = st.session_state.referee_stats
 
-        st.markdown(f"### {stage['icon']} Stage {ref_stage_idx + 1} / {len(_REFEREE_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
+        st.markdown(f"### {stage['icon']} Match {ref_stage_idx + 1} / {len(_REFEREE_STAGES)}: {stage['name']}  *(Age {stage['age']})*")
         st.progress(ref_stage_idx / len(_REFEREE_STAGES))
 
         rr1, rr2, rr3, rr4, rr5 = st.columns(5)
@@ -3405,7 +3417,7 @@ with tab_referee:
             if gains:
                 st.markdown("**Career impact:** " + "  ·  ".join(gains))
 
-            next_label = "▶️ Next Stage" if ref_stage_idx < len(_REFEREE_STAGES) - 1 else "🏁 Retire & See Legacy"
+            next_label = "▶️ Next Match" if ref_stage_idx < len(_REFEREE_STAGES) - 1 else "🏁 Retire & See Legacy"
             if st.button(next_label, key="ref_next_stage"):
                 applied_delta, caught, risk = _referee_resolve_corruption(delta)
                 for k, v in applied_delta.items():
