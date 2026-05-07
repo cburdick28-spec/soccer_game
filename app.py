@@ -3252,7 +3252,25 @@ def _referee_generate_stage(profile: dict, stage: dict, stats: dict) -> dict:
     candidates = [entry for entry in pool if entry[0] not in used]
     if len(candidates) < 3:
         candidates = pool
-    picks = random.sample(candidates, 3)
+
+    corrupt_candidates = [entry for entry in candidates if entry[1].get("corruption", 0) > 0]
+    non_corrupt_candidates = [entry for entry in candidates if entry[1].get("corruption", 0) == 0]
+
+    picks = []
+    if corrupt_candidates:
+        # Always keep one morally risky/corrupt path available.
+        first_pick = random.choice(corrupt_candidates)
+        picks.append(first_pick)
+        remaining_pool = [entry for entry in candidates if entry != first_pick]
+    else:
+        remaining_pool = candidates
+
+    needed = 3 - len(picks)
+    if len(remaining_pool) < needed:
+        remaining_pool = candidates
+    picks.extend(random.sample(remaining_pool, needed))
+    random.shuffle(picks)
+
     return {
         "narrative": random.choice(_REFEREE_STAGE_NARRATIVES[stage["id"]]),
         "choices": [p[0] for p in picks],
@@ -3431,7 +3449,8 @@ with tab_referee:
                     )
                 elif risk > 0 and not caught:
                     resolved_outcome += (
-                        " No conclusive integrity evidence emerges after review, so your corruption record does not increase."
+                        " You got away with it this time: no conclusive integrity evidence emerges, "
+                        "so your official corruption record does not increase."
                     )
 
                 st.session_state.referee_history.append({
